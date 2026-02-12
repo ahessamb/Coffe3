@@ -1,0 +1,62 @@
+{% extends 'website/base.html' %}
+
+{% block title %}تکمیل خرید - ژیناد{% endblock %}
+
+{% block content %}
+<div class="confirmation-page">
+    <div class="container">
+        <div class="confirmation-box">
+            <h1>تکمیل خرید</h1>
+            
+            <div class="order-info">
+                <p class="order-number">شماره سفارش: <strong>#{{ order.id }}</strong></p>
+                <p class="order-total">مبلغ قابل پرداخت: <strong>{{ order.total_price|floatformat:0 }} تومان</strong></p>
+            </div>
+            
+            {% if settings %}
+            <div class="payment-info">
+                <h2>اطلاعات پرداخت</h2>
+                <p>لطفاً مبلغ فوق را به شماره کارت زیر واریز کنید:</p>
+                
+                <div class="card-info">
+                    <div class="info-row">
+                        <span>شماره کارت:</span>
+                        <span class="card-number" dir="ltr">{{ settings.card_number }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span>صاحب کارت:</span>
+                        <span>{{ settings.card_holder_name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span>بانک:</span>
+                        <span>{{ settings.bank_name }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="transaction-form">
+                <h3>ثبت اطلاعات پرداخت</h3>
+                <p>پس از واریز وجه، شماره پیگیری تراکنش را در کادر زیر وارد کنید:</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary btn-large">ثبت نهایی سفارش</button>
+                </form>
+            </div>
+            
+            <div class="order-items">
+                <h3>محصولات سفارش شما</h3>
+                {% for item in order.items.all %}
+                <div class="order-item">
+                    <span>{{ item.product.title }}</span>
+                    <span>{{ item.quantity }} عدد</span>
+                    <span>{{ item.get_subtotal|floatformat:0 }} تومان</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

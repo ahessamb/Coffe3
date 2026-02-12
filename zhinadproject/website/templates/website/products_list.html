@@ -1,0 +1,81 @@
+{% extends 'website/base.html' %}
+
+{% block title %}محصولات - ژیناد{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1>محصولات ما</h1>
+    </div>
+</div>
+
+<section class="products-section">
+    <div class="container">
+        <!-- Category Filter -->
+        <div class="category-filter">
+            <a href="{% url 'website:products' %}" 
+               class="filter-btn {% if selected_category == 'all' %}active{% endif %}">
+                همه
+            </a>
+            <a href="{% url 'website:products' %}?category=coffee" 
+               class="filter-btn {% if selected_category == 'coffee' %}active{% endif %}">
+                قهوه
+            </a>
+            <a href="{% url 'website:products' %}?category=chocolate" 
+               class="filter-btn {% if selected_category == 'chocolate' %}active{% endif %}">
+                شکلات
+            </a>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="products-grid">
+            {% for product in products %}
+            <div class="product-card">
+                <a href="{% url 'website:product_detail' product.slug %}">
+                    <div class="product-image">
+                        {% if product.main_image %}
+                        <img src="{{ product.main_image.url }}" alt="{{ product.title }}">
+                        {% endif %}
+                        {% if product.stock == 0 %}
+                        <span class="badge out-of-stock">ناموجود</span>
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3 class="product-title">{{ product.title }}</h3>
+                        {% if product.subtitle %}
+                        <p class="product-subtitle">{{ product.subtitle }}</p>
+                        {% endif %}
+                        <p class="product-price">{{ product.price|floatformat:0 }} تومان</p>
+                    </div>
+                </a>
+                {% if product.stock > 0 %}
+                <form action="{% url 'website:add_to_cart' product.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary">افزودن به سبد</button>
+                </form>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="no-products">محصولی یافت نشد.</p>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% if selected_category != 'all' %}&category={{ selected_category }}{% endif %}">اول</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if selected_category != 'all' %}&category={{ selected_category }}{% endif %}">قبلی</a>
+            {% endif %}
+            
+            <span class="current-page">صفحه {{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if selected_category != 'all' %}&category={{ selected_category }}{% endif %}">بعدی</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_category != 'all' %}&category={{ selected_category }}{% endif %}">آخر</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

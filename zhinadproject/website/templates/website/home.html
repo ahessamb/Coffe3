@@ -1,0 +1,52 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">قهوه و شکلات دست‌ساز</h1>
+            <p class="hero-subtitle">تجربه‌ای متفاوت از طعم و کیفیت</p>
+            <a href="{% url 'website:products' %}" class="btn btn-primary">مشاهده محصولات</a>
+        </div>
+    </div>
+</div>
+
+<section class="featured-products">
+    <div class="container">
+        <h2 class="section-title">محصولات ویژه</h2>
+
+        <div class="products-grid">
+            {% for product in featured_products %}
+            <div class="product-card">
+                <a href="{% url 'website:product_detail' product.slug %}">
+                    <div class="product-image">
+                        {% if product.main_image %}
+                        <img src="{{ product.main_image.url }}" alt="{{ product.title }}">
+                        {% endif %}
+                    </div>
+                    <div class="product-info">
+                        <h3 class="product-title">{{ product.title }}</h3>
+                        <p class="product-price">{{ product.price|floatformat:0 }} تومان</p>
+                    </div>
+                </a>
+                <form action="{% url 'website:add_to_cart' product.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary">افزودن به سبد</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="about-preview">
+    <div class="container">
+        <div class="about-content">
+            <h2>داستان ژیناد</h2>
+            <p>ما با عشق و علاقه، بهترین قهوه و شکلات‌های دست‌ساز را برای شما آماده می‌کنیم. هر محصول ما داستانی دارد...</p>
+            <a href="{% url 'website:about' %}" class="btn btn-outline">بیشتر بخوانید</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

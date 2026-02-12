@@ -1,0 +1,71 @@
+{% extends 'website/base.html' %}
+
+{% block title %}{{ product.title }} - ژیناد{% endblock %}
+
+{% block content %}
+<div class="product-detail">
+    <div class="container">
+        <div class="product-layout">
+            <!-- Images -->
+            <div class="product-images">
+                <div class="main-image">
+                    {% if product.main_image %}
+                    <img src="{{ product.main_image.url }}" alt="{{ product.title }}" id="mainImage">
+                    {% endif %}
+                </div>
+                
+                {% if product.images.all %}
+                <div class="image-gallery">
+                    <img src="{{ product.main_image.url }}" alt="{{ product.title }}" 
+                         class="gallery-thumb active" onclick="changeImage(this)">
+                    {% for image in product.images.all %}
+                    <img src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.title }}" 
+                         class="gallery-thumb" onclick="changeImage(this)">
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Product Info -->
+            <div class="product-details">
+                <h1 class="product-title">{{ product.title }}</h1>
+                
+                {% if product.subtitle %}
+                <p class="product-subtitle">{{ product.subtitle }}</p>
+                {% endif %}
+                
+                <div class="product-price-section">
+                    <span class="price">{{ product.price|floatformat:0 }} تومان</span>
+                    {% if product.stock > 0 %}
+                    <span class="stock-status in-stock">موجود</span>
+                    {% else %}
+                    <span class="stock-status out-of-stock">ناموجود</span>
+                    {% endif %}
+                </div>
+                
+                <div class="product-description">
+                    <h3>توضیحات محصول</h3>
+                    <p>{{ product.description|linebreaks }}</p>
+                </div>
+                
+                {% if product.stock > 0 %}
+                <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-large">افزودن به سبد خرید</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function changeImage(element) {
+    document.getElementById('mainImage').src = element.src;
+    document.querySelectorAll('.gallery-thumb').forEach(thumb => {
+        thumb.classList.remove('active');
+    });
+    element.classList.add('active');
+}
+</script>
+{% endblock %}

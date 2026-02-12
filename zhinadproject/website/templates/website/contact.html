@@ -1,0 +1,36 @@
+{% extends 'website/base.html' %}
+
+{% block title %}تماس با ما - ژیناد{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1>تماس با ما</h1>
+    </div>
+</div>
+
+<section class="contact-section">
+    <div class="container">
+        <div class="contact-info">
+            {% if settings %}
+            <div class="info-card">
+                <h3>اطلاعات تماس</h3>
+                <p><strong>تلفن:</strong> {{ settings.contact_phone }}</p>
+                {% if settings.contact_email %}
+                <p><strong>ایمیل:</strong> {{ settings.contact_email }}</p>
+                {% endif %}
+                {% if settings.address %}
+                <p><strong>آدرس:</strong> {{ settings.address }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="info-card">
+                <h3>ساعات کاری</h3>
+                <p>شنبه تا پنج‌شنبه: ۹ صبح تا ۹ شب</p>
+                <p>جمعه: تعطیل</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
