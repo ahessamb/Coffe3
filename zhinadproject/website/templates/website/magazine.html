@@ -6,25 +6,54 @@
 <div class="page-header">
     <div class="container">
         <h1>مجله ژیناد</h1>
+        <p style="color: var(--text-secondary); font-size: 1.2rem; margin-top: 1rem;">
+            داستان‌ها، دستور العمل‌ها و نکات جالب درباره قهوه و شکلات
+        </p>
     </div>
 </div>
 
-<section class="magazine-section">
+<section class="blog-section">
     <div class="container">
-        <div class="articles-grid">
-            <!-- شما می‌توانید مقالات را اینجا اضافه کنید -->
-            <article class="article-card">
-                <h2>هنر دم‌آوری قهوه</h2>
-                <p>راهنمای کامل برای تهیه بهترین فنجان قهوه در خانه...</p>
-                <a href="#" class="read-more">ادامه مطلب</a>
+        <div class="blog-grid">
+            {% for post in blog_posts %}
+            <article class="blog-card">
+                <a href="{% url 'website:blog_detail' post.slug %}">
+                    <div class="blog-image">
+                        {% if post.featured_image %}
+                        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}">
+                        {% endif %}
+                    </div>
+                    <div class="blog-content">
+                        <div class="blog-meta">
+                            <span>📝 {{ post.author }}</span>
+                            <span>📅 {{ post.published_at|date:"j F Y" }}</span>
+                        </div>
+                        <h2 class="blog-title">{{ post.title }}</h2>
+                        <p class="blog-excerpt">{{ post.excerpt }}</p>
+                        <span class="read-more">ادامه مطلب ←</span>
+                    </div>
+                </a>
             </article>
-            
-            <article class="article-card">
-                <h2>تاریخچه شکلات</h2>
-                <p>سفری به گذشته و آشنایی با تاریخ شکلات در جهان...</p>
-                <a href="#" class="read-more">ادامه مطلب</a>
-            </article>
+            {% empty %}
+            <p class="no-products">به زودی مقالات جدید منتشر می‌شود</p>
+            {% endfor %}
         </div>
+
+        {% if is_paginated %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page=1">اول</a>
+            <a href="?page={{ page_obj.previous_page_number }}">قبلی</a>
+            {% endif %}
+
+            <span class="current-page">صفحه {{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">بعدی</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}">آخر</a>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

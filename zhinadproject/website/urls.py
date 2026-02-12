@@ -8,7 +8,10 @@ urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
     path('about/', views.AboutView.as_view(), name='about'),
     path('contact/', views.ContactView.as_view(), name='contact'),
+
+    # Blog / Magazine
     path('magazine/', views.MagazineView.as_view(), name='magazine'),
+    path('magazine/<slug:slug>/', views.BlogDetailView.as_view(), name='blog_detail'),
 
     # Products
     path('products/', views.ProductListView.as_view(), name='products'),
@@ -22,4 +25,6 @@ urlpatterns = [
 
     # Order
     path('order/confirmation/', views.order_confirmation, name='order_confirmation'),
+    path('order/success/<str:tracking_code>/', views.order_success, name='order_success'),
+    path('order/tracking/', views.order_tracking, name='order_tracking'),
 ]

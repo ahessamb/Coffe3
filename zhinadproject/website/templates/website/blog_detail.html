@@ -1,0 +1,29 @@
+{% extends 'website/base.html' %}
+{% load static %}
+
+{% block title %}{{ post.title }} - مجله ژیناد{% endblock %}
+
+{% block content %}
+<div class="blog-detail">
+    <div class="container">
+        <div class="blog-header">
+            <h1>{{ post.title }}</h1>
+            <div class="blog-meta">
+                <span>📝 {{ post.author }}</span>
+                <span>📅 {{ post.published_at|date:"j F Y" }}</span>
+                <span>👁 {{ post.views }} بازدید</span>
+            </div>
+        </div>
+
+        {% if post.featured_image %}
+        <div class="blog-featured-image">
+            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}">
+        </div>
+        {% endif %}
+
+        <div class="blog-body">
+            {{ post.content|linebreaks }}
+        </div>
+    </div>
+</div>
+{% endblock %}

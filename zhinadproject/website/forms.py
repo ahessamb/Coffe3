@@ -47,3 +47,25 @@ class TransactionForm(forms.Form):
             'dir': 'ltr'
         })
     )
+
+
+class OrderTrackingForm(forms.Form):
+    """Form for tracking orders"""
+    phone_number = forms.CharField(
+        max_length=11,
+        label='شماره تلفن',
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': '09121234567',
+            'dir': 'ltr'
+        })
+    )
+    tracking_code = forms.CharField(
+        max_length=50,
+        label='کد پیگیری',
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'ZHINAD-XXXXXXXX-XXXXX',
+            'dir': 'ltr'
+        })
+    )

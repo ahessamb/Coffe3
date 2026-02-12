@@ -3,8 +3,9 @@ from django.views.generic import ListView, DetailView, TemplateView
 from django.contrib import messages
 from django.utils import timezone
 from decimal import Decimal
-from .models import Product, Order, OrderItem, SiteSettings
-from .forms import OrderForm, TransactionForm
+from .models import Product, Order, OrderItem, SiteSettings, BlogPost
+from .forms import OrderForm, TransactionForm, OrderTrackingForm
+from .utils import send_telegram_notification
 
 
 # ========== STATIC PAGES ==========
@@ -15,6 +16,7 @@ class HomeView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['featured_products'] = Product.objects.filter(is_active=True)[:6]
+        context['recent_blogs'] = BlogPost.objects.filter(is_published=True)[:3]
         return context
 
 
@@ -34,8 +36,34 @@ class ContactView(TemplateView):
         return context
 
 
-class MagazineView(TemplateView):
+# ========== BLOG / MAGAZINE ==========
+
+class MagazineView(ListView):
+    model = BlogPost
     template_name = 'website/magazine.html'
+    context_object_name = 'blog_posts'
+    paginate_by = 9
+
+    def get_queryset(self):
+        return BlogPost.objects.filter(is_published=True)
+
+
+class BlogDetailView(DetailView):
+    model = BlogPost
+    template_name = 'website/blog_detail.html'
+    context_object_name = 'post'
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
+
+    def get_queryset(self):
+        return BlogPost.objects.filter(is_published=True)
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        # Increment views
+        obj.views += 1
+        obj.save(update_fields=['views'])
+        return obj
 
 
 # ========== PRODUCT PAGES ==========
@@ -198,12 +226,15 @@ def order_confirmation(request):
             order.purchased_at = timezone.now()
             order.save()
 
+            # Send Telegram notification
+            send_telegram_notification(order, action='new_order')
+
             # Clear session
             if 'order_id' in request.session:
                 del request.session['order_id']
 
-            messages.success(request, 'سفارش شما با موفقیت ثبت شد!')
-            return redirect('website:home')
+            messages.success(request, 'سفارش شما با موفقیت ثبت شد! کد پیگیری خود را یادداشت کنید.')
+            return redirect('website:order_success', tracking_code=order.tracking_code)
     else:
         form = TransactionForm()
 
@@ -214,3 +245,39 @@ def order_confirmation(request):
     }
 
     return render(request, 'website/order_confirmation.html', context)
+
+
+def order_success(request, tracking_code):
+    """Order success page"""
+    order = get_object_or_404(Order, tracking_code=tracking_code)
+    return render(request, 'website/order_success.html', {'order': order})
+
+
+# ========== ORDER TRACKING ==========
+
+def order_tracking(request):
+    """Track order by phone number and tracking code"""
+    order = None
+
+    if request.method == 'POST':
+        form = OrderTrackingForm(request.POST)
+        if form.is_valid():
+            phone = form.cleaned_data['phone_number']
+            tracking_code = form.cleaned_data['tracking_code']
+
+            try:
+                order = Order.objects.get(
+                    phone_number=phone,
+                    tracking_code=tracking_code
+                )
+            except Order.DoesNotExist:
+                messages.error(request, 'سفارشی با این مشخصات یافت نشد.')
+    else:
+        form = OrderTrackingForm()
+
+    context = {
+        'form': form,
+        'order': order
+    }
+
+    return render(request, 'website/order_tracking.html', context)

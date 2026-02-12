@@ -9,86 +9,89 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <a href="{% url 'website:home' %}">
+<!-- Header -->
+<header class="header">
+    <div class="container">
+        <div class="header-content">
+            <div class="logo">
+                <a href="{% url 'website:home' %}">
+                    <img src="{% static 'website/images/logo.png' %}" alt="ژیناد" class="logo-image">
+                    <div class="logo-text">
                         <h1>ژیناد</h1>
                         <p class="tagline">قهوه و شکلات</p>
-                    </a>
-                </div>
-
-                <nav class="nav">
-                    <a href="{% url 'website:home' %}" class="nav-link">خانه</a>
-                    <a href="{% url 'website:products' %}" class="nav-link">محصولات</a>
-                    <a href="{% url 'website:about' %}" class="nav-link">داستان ما</a>
-                    <a href="{% url 'website:magazine' %}" class="nav-link">مجله</a>
-                    <a href="{% url 'website:contact' %}" class="nav-link">تماس با ما</a>
-                </nav>
-
-                <div class="cart-icon">
-                    <a href="{% url 'website:cart' %}">
-                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 2L7 8H1l5 4-2 6 5-4 5 4-2-6 5-4h-6l-2-6z"/>
-                        </svg>
-                        <span class="cart-count">{{ request.session.cart|length|default:0 }}</span>
-                    </a>
-                </div>
+                    </div>
+                </a>
             </div>
-        </div>
-    </header>
 
-    <!-- Messages -->
-    {% if messages %}
-    <div class="messages">
-        <div class="container">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
+            <nav class="nav">
+                <a href="{% url 'website:home' %}" class="nav-link">خانه</a>
+                <a href="{% url 'website:products' %}" class="nav-link">محصولات</a>
+                <a href="{% url 'website:about' %}" class="nav-link">داستان ما</a>
+                <a href="{% url 'website:magazine' %}" class="nav-link">مجله</a>
+                <a href="{% url 'website:contact' %}" class="nav-link">تماس با ما</a>
+            </nav>
+
+            <div class="cart-icon">
+                <a href="{% url 'website:cart' %}">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 2L7 8H1l5 4-2 6 5-4 5 4-2-6 5-4h-6l-2-6z"/>
+                    </svg>
+                    <span class="cart-count">{{ request.session.cart|length|default:0 }}</span>
+                </a>
             </div>
-            {% endfor %}
         </div>
     </div>
-    {% endif %}
+</header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        {% block content %}{% endblock %}
-    </main>
+<!-- Messages -->
+{% if messages %}
+<div class="messages">
+    <div class="container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>ژیناد</h3>
-                    <p>بهترین قهوه و شکلات دست‌ساز</p>
-                </div>
+<!-- Main Content -->
+<main class="main-content">
+    {% block content %}{% endblock %}
+</main>
 
-                <div class="footer-section">
-                    <h4>دسترسی سریع</h4>
-                    <ul>
-                        <li><a href="{% url 'website:products' %}">محصولات</a></li>
-                        <li><a href="{% url 'website:about' %}">درباره ما</a></li>
-                        <li><a href="{% url 'website:contact' %}">تماس با ما</a></li>
-                    </ul>
-                </div>
-
-                <div class="footer-section">
-                    <h4>تماس با ما</h4>
-                    <p>تلفن: ۰۹۱۲۱۲۳۴۵۶۷</p>
-                    <p>ایمیل: info@zhinad.com</p>
-                </div>
+<!-- Footer -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>ژیناد</h3>
+                <p>بهترین قهوه و شکلات دست‌ساز</p>
             </div>
 
-            <div class="footer-bottom">
-                <p>&copy; ۱۴۰۳ ژیناد. تمامی حقوق محفوظ است.</p>
+            <div class="footer-section">
+                <h4>دسترسی سریع</h4>
+                <ul>
+                    <li><a href="{% url 'website:products' %}">محصولات</a></li>
+                    <li><a href="{% url 'website:about' %}">درباره ما</a></li>
+                    <li><a href="{% url 'website:contact' %}">تماس با ما</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h4>تماس با ما</h4>
+                <p>تلفن: ۰۹۱۲۱۲۳۴۵۶۷</p>
+                <p>ایمیل: info@zhinad.com</p>
             </div>
         </div>
-    </footer>
 
-    {% block extra_js %}{% endblock %}
+        <div class="footer-bottom">
+            <p>&copy; ۱۴۰۳ ژیناد. تمامی حقوق محفوظ است.</p>
+        </div>
+    </div>
+</footer>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>

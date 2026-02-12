@@ -1,0 +1,46 @@
+{% extends 'website/base.html' %}
+
+{% block title %}ثبت سفارش - ژیناد{% endblock %}
+
+{% block content %}
+<div class="confirmation-page">
+    <div class="container">
+        <div class="confirmation-box" style="text-align: center;">
+            <div style="font-size: 5rem; color: var(--success); margin-bottom: 2rem;">✓</div>
+
+            <h1 style="color: var(--success);">سفارش شما با موفقیت ثبت شد!</h1>
+
+            <div class="order-info" style="margin: 3rem 0;">
+                <p class="order-number" style="font-size: 1.5rem;">
+                    کد پیگیری:
+                    <strong style="color: var(--primary-brown); font-size: 1.8rem; direction: ltr; display: inline-block;">
+                        {{ order.tracking_code }}
+                    </strong>
+                </p>
+                <p style="color: var(--text-muted); margin-top: 1rem;">
+                    لطفاً این کد را یادداشت کنید
+                </p>
+            </div>
+
+            <div style="padding: 2rem; background: var(--bg-secondary); border-radius: 12px; margin: 2rem 0;">
+                <h3>مراحل بعدی:</h3>
+                <p style="line-height: 2; color: var(--text-secondary);">
+                    1. سفارش شما در حال بررسی است<br>
+                    2. پس از تایید، سفارش آماده‌سازی می‌شود<br>
+                    3. محصولات به آدرس شما ارسال خواهند شد<br>
+                    4. می‌توانید با کد پیگیری، وضعیت سفارش را دنبال کنید
+                </p>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 3rem;">
+                <a href="{% url 'website:order_tracking' %}" class="btn btn-primary">
+                    پیگیری سفارش
+                </a>
+                <a href="{% url 'website:home' %}" class="btn btn-outline">
+                    بازگشت به صفحه اصلی
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends 'website/base.html' %}
+
+{% block title %}پیگیری سفارش - ژیناد{% endblock %}
+
+{% block content %}
+<div class="tracking-page">
+    <div class="container">
+        <h1 class="page-title">پیگیری سفارش</h1>
+        
+        <div class="tracking-form-wrapper">
+            <form method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="form-group">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.errors %}
+                    <span class="error">{{ field.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">
+                    جستجوی سفارش
+                </button>
+            </form>
+        </div>
+        
+        {% if order %}
+        <div class="order-status">
+            <div class="status-header">
+                <h2>سفارش #{{ order.id }}</h2>
+                <p style="font-size: 1.3rem; color: var(--text-secondary); margin: 1rem 0;">
+                    کد پیگیری: <strong style="direction: ltr; display: inline-block;">{{ order.tracking_code }}</strong>
+                </p>
+                <span class="status-badge" style="background: {% if order.status == 'delivered' %}var(--success){% elif order.status == 'cancelled' %}var(--error){% else %}var(--accent-gold){% endif %}; color: white;">
+                    {{ order.get_status_display }}
+                </span>
+            </div>
+            
+            <div class="status-timeline">
+                <div class="timeline-item">
+                    <div class="timeline-icon active">✓</div>
+                    <div class="timeline-content">
+                        <h4>ثبت سفارش</h4>
+                        <p>{{ order.created_at|date:"j F Y - H:i" }}</p>
+                    </div>
+                </div>
+                
+                {% if order.purchased_at %}
+                <div class="timeline-item">
+                    <div class="timeline-icon active">✓</div>
+                    <div class="timeline-content">
+                        <h4>پرداخت انجام شد</h4>
+                        <p>{{ order.purchased_at|date:"j F Y - H:i" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if order.confirmed_at %}
+                <div class="timeline-item">
+                    <div class="timeline-icon active">✓</div>
+                    <div class="timeline-content">
+                        <h4>تایید شده</h4>
+                        <p>{{ order.confirmed_at|date:"j F Y - H:i" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}
+                <div class="timeline-item">
+                    <div class="timeline-icon active">✓</div>
+                    <div class="timeline-content">
+                        <h4>در حال آماده‌سازی</h4>
+                        <p>سفارش شما در حال آماده‌سازی است</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if order.status == 'shipped' or order.status == 'delivered' %}
+                <div class="timeline-item">
+                    <div class="timeline-icon active">✓</div>
+                    <div class="timeline-content">
+                        <h4>ارسال شده</h4>
+                        <p>سفارش شما ارسال شده است</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if order.status == 'delivered' %}
+                <div class="timeline-item">
+                    <div class="timeline-icon active">✓</div>
+                    <div class="timeline-content">
+                        <h4>تحویل داده شده</h4>
+                        <p>سفارش شما تحویل داده شد</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 12px; margin-top: 3rem;">
+                <h3>جزئیات سفارش</h3>
+                <table style="width: 100%; margin-top: 1.5rem;">
+                    <thead>
+                        <tr style="background: var(--warm-white);">
+                            <th style="padding: 1rem; text-align: right;">محصول</th>
+                            <th style="padding: 1rem;">تعداد</th>
+                            <th style="padding: 1rem;">قیمت</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items.all %}
+                        <tr style="border-bottom: 1px solid var(--border-light);">
+                            <td style="padding: 1rem;">{{ item.product.title }}</td>
+                            <td style="padding: 1rem; text-align: center;">{{ item.quantity }}</td>
+                            <td style="padding: 1rem; text-align: center;">{{ item.get_subtotal|floatformat:0 }} تومان</td>
+                        </tr>
+                        {% endfor %}
+                        <tr style="font-weight: 700; background: var(--cream);">
+                            <td colspan="2" style="padding: 1rem;">جمع کل:</td>
+                            <td style="padding: 1rem; text-align: center; color: var(--primary-brown);">{{ order.total_price|floatformat:0 }} تومان</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

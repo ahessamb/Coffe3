@@ -1,0 +1,17 @@
+categories (dynamic)
+sort of products
+details of products
+select multiple items
+overall css / format
+blog
+bale
+telegram details and notifications in other states
+add multiple recipients
+
+login - customer details?
+order status
+images / headers / tails
+simpler transaction code
+basket icon
+tamas ba ma
+darbare ma
