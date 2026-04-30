@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.text import slugify
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -366,6 +367,22 @@ class SiteSettings(models.Model):
     contact_phone = models.CharField(max_length=11, verbose_name='شماره تماس')
     contact_email = models.EmailField(blank=True, verbose_name='ایمیل')
     address = models.TextField(blank=True, verbose_name='آدرس')
+    address_lat = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        verbose_name="عرض جغرافیایی (Lat)",
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+    address_lng = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        verbose_name="طول جغرافیایی (Lng)",
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
 
     # Branding / Landing images (optional)
     logo_image = models.ImageField(
@@ -393,6 +410,12 @@ class SiteSettings(models.Model):
 
     def __str__(self):
         return "تنظیمات سایت"
+
+    def clean(self):
+        super().clean()
+        # Avoid half-configured state: if one coordinate is set, require the other.
+        if (self.address_lat is None) ^ (self.address_lng is None):
+            raise ValidationError("برای نمایش موقعیت، هر دو مقدار Lat و Lng باید وارد شوند.")
 
 
 class HomeHeroImage(models.Model):

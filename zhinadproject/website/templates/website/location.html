@@ -1,0 +1,54 @@
+{% extends 'website/base.html' %}
+
+{% block title %}نشانی ما - ژیناد{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1>نشانی ما</h1>
+    </div>
+</div>
+
+<section class="location-section">
+    <div class="container">
+        {% if site_settings and site_settings.address %}
+        <div class="location-grid">
+            <div class="location-info">
+                <h2 class="section-title">نشانی</h2>
+                <p class="location-address">{{ site_settings.address }}</p>
+
+                {% if site_settings.address_lat != None and site_settings.address_lng != None %}
+                <div class="location-links" aria-label="لینک‌های نقشه">
+                    <a class="location-link" target="_blank" rel="noopener"
+                       href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address_lat }},{{ site_settings.address_lng }}">
+                        باز کردن در گوگل‌مپ
+                    </a>
+                    <a class="location-link" target="_blank" rel="noopener"
+                       href="https://www.google.com/maps/dir/?api=1&destination={{ site_settings.address_lat }},{{ site_settings.address_lng }}">
+                        مسیریابی
+                    </a>
+                    <a class="location-link" target="_blank" rel="noopener"
+                       href="https://nshn.ir/?lat={{ site_settings.address_lat }}&lng={{ site_settings.address_lng }}">
+                        باز کردن در نشان
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if site_settings.address_lat != None and site_settings.address_lng != None %}
+            <div class="location-map" aria-label="نقشه">
+                <iframe
+                    title="نقشه ژیناد"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    src="https://www.google.com/maps?q={{ site_settings.address_lat }},{{ site_settings.address_lng }}&z=16&output=embed">
+                </iframe>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="no-products">نشانی هنوز ثبت نشده است.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

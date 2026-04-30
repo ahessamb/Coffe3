@@ -53,6 +53,10 @@ class ContactView(TemplateView):
         return context
 
 
+class LocationView(TemplateView):
+    template_name = "website/location.html"
+
+
 # ========== BLOG / MAGAZINE ==========
 
 class MagazineView(ListView):

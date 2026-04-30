@@ -33,6 +33,7 @@
                 <a href="{% url 'website:about' %}" class="nav-link">داستان ما</a>
                 <a href="{% url 'website:magazine' %}" class="nav-link">مجله</a>
                 <a href="{% url 'website:contact' %}" class="nav-link">تماس با ما</a>
+                <a href="{% url 'website:location' %}" class="nav-link">نشانی ما</a>
             </nav>
 
             <div class="cart-icon">
@@ -92,8 +93,58 @@
 
             <div class="footer-section">
                 <h4>تماس با ما</h4>
-                <p>تلفن: ۰۹۱۲۱۲۳۴۵۶۷</p>
-                <p>ایمیل: info@zhinad.com</p>
+                {% if site_settings and site_settings.contact_phone %}
+                <p>تلفن: {{ site_settings.contact_phone }}</p>
+                {% endif %}
+                {% if site_settings and site_settings.contact_email %}
+                <p>ایمیل: {{ site_settings.contact_email }}</p>
+                {% endif %}
+            </div>
+
+            <div class="footer-section">
+                <h4>نشانی ما</h4>
+                {% if site_settings and site_settings.address %}
+                <p>{{ site_settings.address }}</p>
+                {% endif %}
+
+                {% if site_settings and site_settings.address_lat != None and site_settings.address_lng != None %}
+                <div class="footer-map-links" aria-label="لینک‌های نقشه">
+                    <a class="footer-map-link" target="_blank" rel="noopener"
+                       href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address_lat }},{{ site_settings.address_lng }}">
+                        <span class="footer-map-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s7-6.5 7-13a7 7 0 1 0-14 0c0 6.5 7 13 7 13z"/>
+                                <circle cx="12" cy="9" r="2.5"/>
+                            </svg>
+                        </span>
+                        گوگل‌مپ
+                    </a>
+
+                    <a class="footer-map-link" target="_blank" rel="noopener"
+                       href="https://www.google.com/maps/dir/?api=1&destination={{ site_settings.address_lat }},{{ site_settings.address_lng }}">
+                        <span class="footer-map-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 12h-7"/>
+                                <path d="M19 9l3 3-3 3"/>
+                                <path d="M2 12h7"/>
+                                <path d="M5 9l-3 3 3 3"/>
+                                <path d="M12 3v18"/>
+                            </svg>
+                        </span>
+                        مسیریابی
+                    </a>
+
+                    <a class="footer-map-link" target="_blank" rel="noopener"
+                       href="https://nshn.ir/?lat={{ site_settings.address_lat }}&lng={{ site_settings.address_lng }}">
+                        <span class="footer-map-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2l3 7h7l-5.5 4 2.5 7-7-4.5L5 20l2.5-7L2 9h7l3-7z"/>
+                            </svg>
+                        </span>
+                        نشان
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
 

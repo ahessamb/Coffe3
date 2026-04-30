@@ -384,7 +384,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             'fields': ('card_number', 'card_holder_name', 'bank_name')
         }),
         ('اطلاعات تماس', {
-            'fields': ('contact_phone', 'contact_email', 'address')
+            'fields': ('contact_phone', 'contact_email', 'address', 'address_lat', 'address_lng')
         }),
         ('تنظیمات تلگرام', {
             'fields': ('telegram_bot_token',),
