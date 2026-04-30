@@ -2,7 +2,14 @@
 {% load static %}
 
 {% block content %}
-<div class="hero">
+<div class="hero{% if home_hero_images %} hero-with-album{% endif %}">
+    {% if home_hero_images %}
+    <div class="hero-album" aria-hidden="true">
+        {% for img in home_hero_images %}
+        <img src="{{ img.image.url }}" alt="" class="hero-album-image{% if forloop.first %} is-active{% endif %}">
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="container">
         <div class="hero-content">
             <h1 class="hero-title">قهوه و شکلات دست‌ساز</h1>
@@ -58,4 +65,20 @@
         </div>
     </div>
 </section>
+{% if home_hero_images|length > 1 %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const images = Array.from(document.querySelectorAll('.hero-album-image'));
+  if (images.length <= 1) return;
+  let idx = 0;
+  setInterval(() => {
+    images[idx].classList.remove('is-active');
+    idx = (idx + 1) % images.length;
+    images[idx].classList.add('is-active');
+  }, 4500);
+});
+</script>
+{% endblock %}
+{% endif %}
 {% endblock %}

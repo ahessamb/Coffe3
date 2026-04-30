@@ -14,6 +14,7 @@ from .models import (
     Order,
     OrderItem,
     SiteSettings,
+    HomeHeroImage,
     BlogPost,
     ContentPage,
     ContentBlock,
@@ -371,7 +372,14 @@ class BlogPostAdmin(admin.ModelAdmin):
 
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):
+    class HomeHeroImageInline(admin.TabularInline):
+        model = HomeHeroImage
+        extra = 1
+        fields = ("image", "order", "is_active")
+        ordering = ("order",)
+
     fieldsets = (
+        ("تصاویر و برندینگ", {"fields": ("logo_image", "footer_image")}),
         ('اطلاعات بانکی', {
             'fields': ('card_number', 'card_holder_name', 'bank_name')
         }),
@@ -387,6 +395,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             'description': 'توکن ربات بله برای ارسال اعلان‌ها'
         }),
     )
+    inlines = [HomeHeroImageInline]
 
     def has_add_permission(self, request):
         return not SiteSettings.objects.exists()

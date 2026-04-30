@@ -15,7 +15,11 @@
         <div class="header-content">
             <div class="logo">
                 <a href="{% url 'website:home' %}">
+                    {% if site_settings and site_settings.logo_image %}
+                    <img src="{{ site_settings.logo_image.url }}" alt="ژیناد" class="logo-image">
+                    {% else %}
                     <img src="{% static 'website/images/logo.png' %}" alt="ژیناد" class="logo-image">
+                    {% endif %}
                     <div class="logo-text">
                         <h1>ژیناد</h1>
                         <p class="tagline">قهوه و شکلات</p>
@@ -66,7 +70,10 @@
 </main>
 
 <!-- Footer -->
-<footer class="footer">
+<footer class="footer{% if site_settings and site_settings.footer_image %} footer-has-bg{% endif %}"
+        {% if site_settings and site_settings.footer_image %}
+        style="--footer-bg-url: url('{{ site_settings.footer_image.url }}');"
+        {% endif %}>
     <div class="container">
         <div class="footer-content">
             <div class="footer-section">

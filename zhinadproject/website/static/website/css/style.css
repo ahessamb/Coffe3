@@ -183,6 +183,76 @@ p {
     background: rgba(255, 255, 255, 0.95);
 }
 
+/* ========== HOME HERO ALBUM (OPTIONAL) ========== */
+.hero-with-album {
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-album {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.hero-album::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(26, 14, 10, 0.10), rgba(26, 14, 10, 0.55));
+    pointer-events: none;
+}
+
+.hero-album-image {
+    position: absolute;
+    top: 98px;
+    left: 0;
+    width: 489px;
+    height: 429px;
+    object-fit: cover;
+    opacity: 0;
+    transform: scale(1.02);
+    transition: opacity 900ms ease, transform 2200ms ease;
+    filter: saturate(1.05) contrast(1.05);
+}
+
+.hero-album-image.is-active {
+    opacity: 1;
+    transform: scale(1.00);
+}
+
+.hero .container,
+.hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* ========== FOOTER BG IMAGE (OPTIONAL) ========== */
+.footer-has-bg {
+    position: relative;
+    overflow: hidden;
+}
+
+.footer-has-bg::before {
+    content: '';
+    position: absolute;
+    top: 135px;
+    left: 0;
+    width: 790px;
+    height: 577px;
+    background-image: var(--footer-bg-url);
+    background-size: cover;
+    background-position: center;
+    opacity: 0.18;
+    filter: saturate(1.05) contrast(1.05);
+    pointer-events: none;
+}
+
+.footer-has-bg .container {
+    position: relative;
+    z-index: 1;
+}
+
 .header-content {
     display: flex;
     justify-content: space-between;

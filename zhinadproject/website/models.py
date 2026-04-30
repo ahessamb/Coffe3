@@ -367,6 +367,20 @@ class SiteSettings(models.Model):
     contact_email = models.EmailField(blank=True, verbose_name='ایمیل')
     address = models.TextField(blank=True, verbose_name='آدرس')
 
+    # Branding / Landing images (optional)
+    logo_image = models.ImageField(
+        upload_to="site/branding/",
+        blank=True,
+        null=True,
+        verbose_name="لوگوی سایت (اختیاری)",
+    )
+    footer_image = models.ImageField(
+        upload_to="site/landing/",
+        blank=True,
+        null=True,
+        verbose_name="تصویر پس‌زمینه فوتر (اختیاری)",
+    )
+
     # Telegram Bot Settings
     telegram_bot_token = models.CharField(max_length=200, blank=True, verbose_name='توکن ربات تلگرام')
 
@@ -379,6 +393,26 @@ class SiteSettings(models.Model):
 
     def __str__(self):
         return "تنظیمات سایت"
+
+
+class HomeHeroImage(models.Model):
+    settings = models.ForeignKey(
+        SiteSettings,
+        related_name="hero_images",
+        on_delete=models.CASCADE,
+        verbose_name="تنظیمات سایت",
+    )
+    image = models.ImageField(upload_to="site/landing/hero/", verbose_name="تصویر")
+    order = models.PositiveIntegerField(default=0, verbose_name="ترتیب")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+
+    class Meta:
+        verbose_name = "تصویر هدر صفحه اصلی"
+        verbose_name_plural = "تصاویر هدر صفحه اصلی"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"Hero image #{self.id}"
 
 
 class NotificationRecipient(models.Model):
