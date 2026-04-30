@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_sqlite:/app/zhinadproject/db.sqlite3
+      - media_data:/app/zhinadproject/media
+      - static_data:/app/zhinadproject/staticfiles
+    environment:
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  db_sqlite:
+  media_data:
+  static_data:

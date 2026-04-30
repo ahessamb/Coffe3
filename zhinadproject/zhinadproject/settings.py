@@ -25,7 +25,12 @@ SECRET_KEY = "django-insecure-^i6k5^#_fm08l#f@yfhh&lk_%+)31(4g+9b1kxvs!n%lm98h)3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Allow local/dev hosts (incl. Docker)
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+]
 
 # Wagtail admin base URL (needed for correct admin links)
 WAGTAILADMIN_BASE_URL = "http://localhost:8000"
