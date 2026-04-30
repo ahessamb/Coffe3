@@ -1,10 +1,25 @@
 from django.contrib import admin
+from django import forms
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.safestring import mark_safe
-from .models import Product, ProductImage, Order, OrderItem, SiteSettings, BlogPost
-from .utils import send_telegram_notification
+import nested_admin
+from tinymce.widgets import TinyMCE
+from .models import (
+    Category,
+    Tag,
+    Product,
+    ProductImage,
+    Order,
+    OrderItem,
+    SiteSettings,
+    BlogPost,
+    ContentPage,
+    ContentBlock,
+    NotificationRecipient,
+)
+from .utils import send_all_notifications
 
 
 class ProductImageInline(admin.TabularInline):
@@ -13,17 +28,126 @@ class ProductImageInline(admin.TabularInline):
     fields = ['image', 'alt_text', 'order']
 
 
+class ProductAdminForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = "__all__"
+
+    def clean_tags(self):
+        tags = self.cleaned_data.get("tags")
+        if tags is not None and tags.count() > 10:
+            raise forms.ValidationError("حداکثر ۱۰ برچسب قابل انتخاب است.")
+        return tags
+
+
+class ContentBlockForm(forms.ModelForm):
+    body_html = forms.CharField(required=False, widget=TinyMCE())
+
+    class Meta:
+        model = ContentBlock
+        fields = "__all__"
+
+
+class ChildContentBlockInline(nested_admin.NestedStackedInline):
+    model = ContentBlock
+    form = ContentBlockForm
+    fk_name = "parent"
+    extra = 0
+    sortable_field_name = "order"
+    fields = ("order", "block_type", "title", "body_html", "image", "caption")
+
+
+class ContentBlockInline(nested_admin.NestedStackedInline):
+    model = ContentBlock
+    form = ContentBlockForm
+    fk_name = "page"
+    extra = 0
+    sortable_field_name = "order"
+    fields = ("order", "block_type", "title", "body_html", "image", "caption")
+    inlines = [ChildContentBlockInline]
+
+    def get_queryset(self, request):
+        # Only show top-level blocks; children are managed nested under parents.
+        return super().get_queryset(request).filter(parent__isnull=True)
+
+
+@admin.register(ContentPage)
+class ContentPageAdmin(nested_admin.NestedModelAdmin):
+    list_display = ("title", "page_type", "slug", "is_published", "published_at", "updated_at")
+    list_filter = ("page_type", "is_published")
+    search_fields = ("title", "slug", "excerpt")
+    prepopulated_fields = {"slug": ("title",)}
+    inlines = [ContentBlockInline]
+
+    fieldsets = (
+        ("اطلاعات صفحه", {"fields": ("page_type", "title", "slug", "is_published")}),
+        (
+            "ویژگی‌های مجله (برای پست‌ها)",
+            {"fields": ("excerpt", "featured_image", "author", "published_at", "views")},
+        ),
+        ("زمان‌ها", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
+    readonly_fields = ("created_at", "updated_at", "views")
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ["title", "slug", "product_count", "products_link"]
+    search_fields = ["title", "slug"]
+    prepopulated_fields = {"slug": ("title",)}
+
+    def product_count(self, obj):
+        return obj.products.count()
+
+    product_count.short_description = "تعداد محصولات"
+
+    def products_link(self, obj):
+        url = reverse("admin:website_product_changelist")
+        return format_html('<a href="{}?category__id__exact={}">مشاهده محصولات</a>', url, obj.id)
+
+    products_link.short_description = "محصولات"
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.products.exists():
+            return False
+        return super().has_delete_permission(request, obj=obj)
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ["title", "slug", "product_count", "products_link"]
+    search_fields = ["title", "slug"]
+    prepopulated_fields = {"slug": ("title",)}
+
+    def product_count(self, obj):
+        return obj.products.count()
+
+    product_count.short_description = "تعداد محصولات"
+
+    def products_link(self, obj):
+        url = reverse("admin:website_product_changelist")
+        return format_html('<a href="{}?tags__id__exact={}">مشاهده محصولات</a>', url, obj.id)
+
+    products_link.short_description = "محصولات"
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.products.exists():
+            return False
+        return super().has_delete_permission(request, obj=obj)
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    form = ProductAdminForm
     list_display = ['title', 'category', 'price', 'stock', 'is_active', 'created_at']
-    list_filter = ['category', 'is_active', 'created_at']
+    list_filter = ['category', 'tags', 'is_active', 'created_at']
     search_fields = ['title', 'description']
     prepopulated_fields = {'slug': ('title',)}
     inlines = [ProductImageInline]
 
     fieldsets = (
         ('اطلاعات اصلی', {
-            'fields': ('title', 'slug', 'subtitle', 'category')
+            'fields': ('title', 'slug', 'subtitle', 'category', 'tags')
         }),
         ('توضیحات و تصویر', {
             'fields': ('description', 'main_image')
@@ -72,7 +196,13 @@ class OrderAdmin(admin.ModelAdmin):
         'get_items_display'
     ]
     inlines = [OrderItemInline]
-    actions = ['confirm_orders', 'mark_as_processing', 'mark_as_shipped', 'mark_as_delivered']
+    actions = [
+        'confirm_orders',
+        'mark_as_processing',
+        'mark_as_shipped',
+        'mark_as_delivered',
+        'mark_as_cancelled'
+    ]
 
     fieldsets = (
         ('اطلاعات سفارش', {
@@ -165,30 +295,56 @@ class OrderAdmin(admin.ModelAdmin):
             order.save()
             count += 1
 
-            # Send Telegram notification
-            send_telegram_notification(order, action='confirmed')
+            # Send notifications to both Telegram and Bale
+            send_all_notifications(order, action='confirmed')
 
         self.message_user(request, f'{count} سفارش تایید شد.')
 
     confirm_orders.short_description = 'تایید سفارش‌های انتخاب شده'
 
     def mark_as_processing(self, request, queryset):
-        queryset.update(status='processing')
-        self.message_user(request, 'وضعیت سفارش‌ها به "در حال آماده‌سازی" تغییر یافت.')
+        count = queryset.update(status='processing')
+
+        # Send notifications
+        for order in queryset:
+            send_all_notifications(order, action='processing')
+
+        self.message_user(request, f'وضعیت {count} سفارش به "در حال آماده‌سازی" تغییر یافت.')
 
     mark_as_processing.short_description = 'تغییر به "در حال آماده‌سازی"'
 
     def mark_as_shipped(self, request, queryset):
-        queryset.update(status='shipped')
-        self.message_user(request, 'وضعیت سفارش‌ها به "ارسال شده" تغییر یافت.')
+        count = queryset.update(status='shipped')
+
+        # Send notifications
+        for order in queryset:
+            send_all_notifications(order, action='shipped')
+
+        self.message_user(request, f'وضعیت {count} سفارش به "ارسال شده" تغییر یافت.')
 
     mark_as_shipped.short_description = 'تغییر به "ارسال شده"'
 
     def mark_as_delivered(self, request, queryset):
-        queryset.update(status='delivered')
-        self.message_user(request, 'وضعیت سفارش‌ها به "تحویل داده شده" تغییر یافت.')
+        count = queryset.update(status='delivered')
+
+        # Send notifications
+        for order in queryset:
+            send_all_notifications(order, action='delivered')
+
+        self.message_user(request, f'وضعیت {count} سفارش به "تحویل داده شده" تغییر یافت.')
 
     mark_as_delivered.short_description = 'تغییر به "تحویل داده شده"'
+
+    def mark_as_cancelled(self, request, queryset):
+        count = queryset.update(status='cancelled')
+
+        # Send notifications
+        for order in queryset:
+            send_all_notifications(order, action='cancelled')
+
+        self.message_user(request, f'وضعیت {count} سفارش به "لغو شده" تغییر یافت.')
+
+    mark_as_cancelled.short_description = 'تغییر به "لغو شده"'
 
 
 @admin.register(BlogPost)
@@ -223,8 +379,12 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             'fields': ('contact_phone', 'contact_email', 'address')
         }),
         ('تنظیمات تلگرام', {
-            'fields': ('telegram_bot_token', 'telegram_chat_id'),
-            'description': 'برای دریافت اعلان سفارش‌های جدید در تلگرام'
+            'fields': ('telegram_bot_token',),
+            'description': 'توکن ربات تلگرام برای ارسال اعلان‌ها'
+        }),
+        ('تنظیمات بله', {
+            'fields': ('bale_bot_token',),
+            'description': 'توکن ربات بله برای ارسال اعلان‌ها'
         }),
     )
 
@@ -233,3 +393,47 @@ class SiteSettingsAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(NotificationRecipient)
+class NotificationRecipientAdmin(admin.ModelAdmin):
+    list_display = ['name', 'platform', 'chat_id', 'is_active_display', 'created_at']
+    list_filter = ['platform', 'is_active', 'created_at']
+    search_fields = ['name', 'chat_id']
+
+    fieldsets = (
+        ('اطلاعات گیرنده', {
+            'fields': ('name', 'platform', 'chat_id')
+        }),
+        ('وضعیت', {
+            'fields': ('is_active',)
+        }),
+    )
+
+    def is_active_display(self, obj):
+        if obj.is_active:
+            return format_html(
+                '<span style="background-color: #4CAF50; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                'فعال'
+            )
+        else:
+            return format_html(
+                '<span style="background-color: #F44336; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+                'غیرفعال'
+            )
+
+    is_active_display.short_description = 'وضعیت'
+
+    actions = ['activate_recipients', 'deactivate_recipients']
+
+    def activate_recipients(self, request, queryset):
+        count = queryset.update(is_active=True)
+        self.message_user(request, f'{count} گیرنده فعال شد.')
+
+    activate_recipients.short_description = 'فعال کردن گیرندگان انتخاب شده'
+
+    def deactivate_recipients(self, request, queryset):
+        count = queryset.update(is_active=False)
+        self.message_user(request, f'{count} گیرنده غیرفعال شد.')
+
+    deactivate_recipients.short_description = 'غیرفعال کردن گیرندگان انتخاب شده'

@@ -27,13 +27,22 @@
                     </div>
                     <div class="product-info">
                         <h3 class="product-title">{{ product.title }}</h3>
+                        {% if product.price != None %}
                         <p class="product-price">{{ product.price|floatformat:0 }} تومان</p>
+                        {% else %}
+                        <p class="product-price no-price">برای اطلاع از آخرین قیمت تماس بگیرید</p>
+                        {% endif %}
                     </div>
                 </a>
+                {% if product.is_buyable %}
                 <form action="{% url 'website:add_to_cart' product.id %}" method="post">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-secondary">افزودن به سبد</button>
+                    <div class="add-qty">
+                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input">
+                        <button type="submit" class="btn btn-secondary">افزودن به سبد</button>
+                    </div>
                 </form>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

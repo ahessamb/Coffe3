@@ -28,13 +28,14 @@
                         <form action="{% url 'website:update_cart' product_id %}" method="post" class="quantity-form">
                             {% csrf_token %}
                             <button type="submit" name="action" value="decrease" class="qty-btn">-</button>
-                            <span class="qty-value">{{ item.quantity }}</span>
+                            <input type="number" name="quantity" min="1" max="{{ item.max_quantity|default:99 }}" value="{{ item.quantity }}" class="qty-input">
+                            <button type="submit" name="action" value="set" class="qty-btn">✓</button>
                             <button type="submit" name="action" value="increase" class="qty-btn">+</button>
                         </form>
                     </div>
 
                     <div class="item-total">
-                        <p>{{ item.price|floatformat:0|add:item.quantity|floatformat:0 }} تومان</p>
+                        <p>{{ item.subtotal|floatformat:0 }} تومان</p>
                     </div>
 
                     <form action="{% url 'website:remove_from_cart' product_id %}" method="post">
@@ -88,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const items = document.querySelectorAll('.cart-item');
     items.forEach(item => {
         const price = parseFloat(item.querySelector('.item-price').textContent.replace(/[^\d]/g, ''));
-        const quantity = parseFloat(item.querySelector('.qty-value').textContent);
+        const quantity = parseFloat(item.querySelector('.qty-input').value);
         const total = price * quantity;
         item.querySelector('.item-total p').textContent = total.toLocaleString('fa-IR') + ' تومان';
     });

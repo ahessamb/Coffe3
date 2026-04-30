@@ -1,0 +1,37 @@
+<div class="content-block content-block-{{ block.block_type }}">
+    {% if block.block_type == "heading" %}
+        {% if block.title %}<h2>{{ block.title }}</h2>{% endif %}
+
+    {% elif block.block_type == "divider" %}
+        <hr class="content-divider">
+
+    {% elif block.block_type == "image" %}
+        {% if block.image %}
+        <figure class="content-figure">
+            <img src="{{ block.image.url }}" alt="{{ block.caption|default:block.title|default:'image' }}">
+            {% if block.caption %}
+            <figcaption>{{ block.caption }}</figcaption>
+            {% endif %}
+        </figure>
+        {% endif %}
+
+    {% elif block.block_type == "callout" %}
+        <div class="content-callout">
+            {% if block.title %}<h3>{{ block.title }}</h3>{% endif %}
+            {% if block.body_html %}{{ block.body_html_safe }}{% endif %}
+        </div>
+
+    {% else %}
+        {% if block.title %}<h3>{{ block.title }}</h3>{% endif %}
+        {% if block.body_html %}{{ block.body_html_safe }}{% endif %}
+    {% endif %}
+
+    {% if block.children.all %}
+        <div class="content-children">
+            {% for child in block.children.all %}
+                {% include 'website/partials/content_block.html' with block=child %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+

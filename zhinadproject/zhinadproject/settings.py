@@ -27,6 +27,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Wagtail admin base URL (needed for correct admin links)
+WAGTAILADMIN_BASE_URL = "http://localhost:8000"
+WAGTAIL_SITE_NAME = "ژیناد"
+
 
 # Application definition
 
@@ -37,7 +41,26 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # CMS helpers (Django admin)
+    "nested_admin",
+    "tinymce",
     "website",
+    # Wagtail CMS
+    "wagtail.contrib.forms",
+    "wagtail.contrib.redirects",
+    "wagtail.embeds",
+    "wagtail.sites",
+    "wagtail.users",
+    "wagtail.snippets",
+    "wagtail.documents",
+    "wagtail.images",
+    "wagtail.search",
+    "wagtail.admin",
+    "wagtail",
+    "modelcluster",
+    "taggit",
+    # Local CMS pages
+    "cms.apps.CmsConfig",
 ]
 
 
@@ -49,6 +72,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
 ]
 
 ROOT_URLCONF = "zhinadproject.urls"
@@ -64,6 +88,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "wagtail.contrib.settings.context_processors.settings",
             ],
         },
     },
@@ -128,7 +153,36 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Wagtail: restrict rich text features (safer + consistent styling)
+WAGTAILADMIN_RICH_TEXT_EDITORS = {
+    "default": {
+        "WIDGET": "wagtail.admin.rich_text.DraftailRichTextArea",
+        "OPTIONS": {
+            "features": [
+                "h2",
+                "h3",
+                "bold",
+                "italic",
+                "ol",
+                "ul",
+                "link",
+                "hr",
+                "blockquote",
+            ],
+        },
+    }
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# TinyMCE configuration (simple, non-technical friendly)
+TINYMCE_DEFAULT_CONFIG = {
+    "height": 260,
+    "menubar": False,
+    "plugins": "lists link autoresize code",
+    "toolbar": "formatselect | bold italic underline | bullist numlist | link unlink | blockquote hr | removeformat | code",
+    "block_formats": "Paragraph=p;Heading 2=h2;Heading 3=h3;Heading 4=h4",
+}

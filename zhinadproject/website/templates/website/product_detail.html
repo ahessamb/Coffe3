@@ -33,9 +33,26 @@
                 {% if product.subtitle %}
                 <p class="product-subtitle">{{ product.subtitle }}</p>
                 {% endif %}
+
+                <div class="product-meta">
+                    <p><strong>دسته‌بندی:</strong> {{ product.category.title }}</p>
+                    {% with product.tags.all as tag_list %}
+                        {% if tag_list %}
+                        <p><strong>برچسب‌ها:</strong>
+                            {% for t in tag_list %}
+                                {{ t.title }}{% if not forloop.last %}، {% endif %}
+                            {% endfor %}
+                        </p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
                 
                 <div class="product-price-section">
+                    {% if product.price != None %}
                     <span class="price">{{ product.price|floatformat:0 }} تومان</span>
+                    {% else %}
+                    <span class="price no-price">برای اطلاع از آخرین قیمت تماس بگیرید</span>
+                    {% endif %}
                     {% if product.stock > 0 %}
                     <span class="stock-status in-stock">موجود</span>
                     {% else %}
@@ -48,10 +65,13 @@
                     <p>{{ product.description|linebreaks }}</p>
                 </div>
                 
-                {% if product.stock > 0 %}
+                {% if product.is_buyable %}
                 <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-primary btn-large">افزودن به سبد خرید</button>
+                    <div class="add-qty">
+                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input">
+                        <button type="submit" class="btn btn-primary btn-large">افزودن به سبد خرید</button>
+                    </div>
                 </form>
                 {% endif %}
             </div>

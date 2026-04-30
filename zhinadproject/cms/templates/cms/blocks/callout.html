@@ -1,0 +1,9 @@
+<div class="cms-callout">
+  {% if value.title %}
+    <div class="cms-callout-title">{{ value.title }}</div>
+  {% endif %}
+  <div class="cms-callout-body">
+    {{ value.text|richtext }}
+  </div>
+</div>
+

@@ -1,0 +1,22 @@
+{% load wagtailimages_tags %}
+
+{% if value.alignment == "left" %}
+  <figure class="cms-image cms-image-left">
+    {% image value.image width-900 as img %}
+    <img src="{{ img.url }}" alt="{{ value.caption|default:'' }}">
+    {% if value.caption %}<figcaption>{{ value.caption }}</figcaption>{% endif %}
+  </figure>
+{% elif value.alignment == "right" %}
+  <figure class="cms-image cms-image-right">
+    {% image value.image width-900 as img %}
+    <img src="{{ img.url }}" alt="{{ value.caption|default:'' }}">
+    {% if value.caption %}<figcaption>{{ value.caption }}</figcaption>{% endif %}
+  </figure>
+{% else %}
+  <figure class="cms-image cms-image-full">
+    {% image value.image width-1400 as img %}
+    <img src="{{ img.url }}" alt="{{ value.caption|default:'' }}">
+    {% if value.caption %}<figcaption>{{ value.caption }}</figcaption>{% endif %}
+  </figure>
+{% endif %}
+

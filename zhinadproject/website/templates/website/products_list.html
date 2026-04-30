@@ -11,21 +11,61 @@
 
 <section class="products-section">
     <div class="container">
-        <!-- Category Filter -->
-        <div class="category-filter">
-            <a href="{% url 'website:products' %}" 
-               class="filter-btn {% if selected_category == 'all' %}active{% endif %}">
-                همه
-            </a>
-            <a href="{% url 'website:products' %}?category=coffee" 
-               class="filter-btn {% if selected_category == 'coffee' %}active{% endif %}">
-                قهوه
-            </a>
-            <a href="{% url 'website:products' %}?category=chocolate" 
-               class="filter-btn {% if selected_category == 'chocolate' %}active{% endif %}">
-                شکلات
-            </a>
-        </div>
+        <!-- Filters -->
+        <form method="get" class="products-filters">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label>دسته‌بندی</label>
+                    <select name="category" class="form-input">
+                        <option value="" {% if not selected_category %}selected{% endif %}>همه</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>{{ cat.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>مرتب‌سازی</label>
+                    <select name="sort" class="form-input">
+                        <option value="newest" {% if sort == "newest" %}selected{% endif %}>جدیدترین</option>
+                        <option value="oldest" {% if sort == "oldest" %}selected{% endif %}>قدیمی‌ترین</option>
+                        <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>ارزان‌ترین</option>
+                        <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>گران‌ترین</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>حداقل قیمت</label>
+                    <input type="number" name="min_price" class="form-input" value="{{ min_price }}" placeholder="مثلاً 100000">
+                </div>
+
+                <div class="filter-group">
+                    <label>حداکثر قیمت</label>
+                    <input type="number" name="max_price" class="form-input" value="{{ max_price }}" placeholder="مثلاً 500000">
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">اعمال</button>
+                    <a href="{% url 'website:products' %}" class="btn btn-outline">پاک کردن</a>
+                </div>
+            </div>
+
+            {% if tags %}
+            <div class="filters-row tags-row">
+                <div class="filter-group">
+                    <label>برچسب‌ها</label>
+                    <div class="tags-filter">
+                        {% for tag in tags %}
+                        <label class="tag-check">
+                            <input type="checkbox" name="tag" value="{{ tag.slug }}" {% if tag.slug in selected_tags %}checked{% endif %}>
+                            <span>{{ tag.title }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </form>
         
         <!-- Products Grid -->
         <div class="products-grid">
@@ -45,13 +85,33 @@
                         {% if product.subtitle %}
                         <p class="product-subtitle">{{ product.subtitle }}</p>
                         {% endif %}
+                        <p class="product-meta">
+                            <span class="meta-item">{{ product.category.title }}</span>
+                            {% with product.tags.all as tag_list %}
+                                {% if tag_list %}
+                                <span class="meta-sep">•</span>
+                                <span class="meta-item">
+                                    {% for t in tag_list %}
+                                        {{ t.title }}{% if not forloop.last %}، {% endif %}
+                                    {% endfor %}
+                                </span>
+                                {% endif %}
+                            {% endwith %}
+                        </p>
+                        {% if product.price != None %}
                         <p class="product-price">{{ product.price|floatformat:0 }} تومان</p>
+                        {% else %}
+                        <p class="product-price no-price">برای اطلاع از آخرین قیمت تماس بگیرید</p>
+                        {% endif %}
                     </div>
                 </a>
-                {% if product.stock > 0 %}
+                {% if product.is_buyable %}
                 <form action="{% url 'website:add_to_cart' product.id %}" method="post">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-secondary">افزودن به سبد</button>
+                    <div class="add-qty">
+                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input">
+                        <button type="submit" class="btn btn-secondary">افزودن به سبد</button>
+                    </div>
                 </form>
                 {% endif %}
             </div>
@@ -64,15 +124,15 @@
         {% if is_paginated %}
         <div class="pagination">
             {% if page_obj.has_previous %}
-            <a href="?page=1{% if selected_category != 'all' %}&category={{ selected_category }}{% endif %}">اول</a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if selected_category != 'all' %}&category={{ selected_category }}{% endif %}">قبلی</a>
+            <a href="?page=1{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">اول</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">قبلی</a>
             {% endif %}
             
             <span class="current-page">صفحه {{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
             
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if selected_category != 'all' %}&category={{ selected_category }}{% endif %}">بعدی</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_category != 'all' %}&category={{ selected_category }}{% endif %}">آخر</a>
+            <a href="?page={{ page_obj.next_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">بعدی</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">آخر</a>
             {% endif %}
         </div>
         {% endif %}

@@ -34,7 +34,11 @@
             <div class="cart-icon">
                 <a href="{% url 'website:cart' %}">
                     <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 2L7 8H1l5 4-2 6 5-4 5 4-2-6 5-4h-6l-2-6z"/>
+                        <path d="M6 7h15l-1.5 9h-12L6 7z"/>
+                        <path d="M6 7l-2-3H1"/>
+                        <path d="M9 7V5a3 3 0 0 1 6 0v2"/>
+                        <path d="M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                        <path d="M18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
                     </svg>
                     <span class="cart-count">{{ request.session.cart|length|default:0 }}</span>
                 </a>

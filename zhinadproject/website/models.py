@@ -2,23 +2,78 @@ from django.db import models
 from django.core.validators import RegexValidator
 from django.utils.text import slugify
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+import secrets
+from django.utils.safestring import mark_safe
+
+try:
+    import bleach
+except Exception:  # pragma: no cover
+    bleach = None
+
+
+class Category(models.Model):
+    title = models.CharField(max_length=200, unique=True, verbose_name='عنوان')
+    slug = models.SlugField(max_length=200, unique=True, blank=True, verbose_name='نامک')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
+
+    class Meta:
+        verbose_name = 'دسته‌بندی'
+        verbose_name_plural = 'دسته‌بندی‌ها'
+        ordering = ['title']
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title, allow_unicode=True)
+        super().save(*args, **kwargs)
+
+
+class Tag(models.Model):
+    title = models.CharField(max_length=200, unique=True, verbose_name='عنوان')
+    slug = models.SlugField(max_length=200, unique=True, blank=True, verbose_name='نامک')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
+
+    class Meta:
+        verbose_name = 'برچسب'
+        verbose_name_plural = 'برچسب‌ها'
+        ordering = ['title']
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title, allow_unicode=True)
+        super().save(*args, **kwargs)
 
 
 class Product(models.Model):
     """Model for Coffee and Chocolate Products"""
-    CATEGORY_CHOICES = [
-        ('coffee', 'قهوه'),
-        ('chocolate', 'شکلات'),
-    ]
 
     title = models.CharField(max_length=200, verbose_name='عنوان')
     slug = models.SlugField(max_length=200, unique=True, blank=True, verbose_name='نامک')
     subtitle = models.CharField(max_length=300, blank=True, verbose_name='زیرعنوان')
     description = models.TextField(verbose_name='توضیحات')
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, verbose_name='دسته‌بندی')
+    category = models.ForeignKey(
+        Category,
+        related_name='products',
+        on_delete=models.PROTECT,
+        verbose_name='دسته‌بندی',
+    )
+    tags = models.ManyToManyField(
+        Tag,
+        related_name='products',
+        blank=True,
+        verbose_name='برچسب‌ها',
+    )
 
     main_image = models.ImageField(upload_to='products/main/', verbose_name='تصویر اصلی')
-    price = models.DecimalField(max_digits=10, decimal_places=0, verbose_name='قیمت (تومان)')
+    price = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True, verbose_name='قیمت (تومان)')
 
     is_active = models.BooleanField(default=True, verbose_name='فعال')
     stock = models.IntegerField(default=0, verbose_name='موجودی')
@@ -38,6 +93,15 @@ class Product(models.Model):
         if not self.slug:
             self.slug = slugify(self.title, allow_unicode=True)
         super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if self.pk and self.tags.count() > 10:
+            raise ValidationError({"tags": "حداکثر ۱۰ برچسب قابل انتخاب است."})
+
+    @property
+    def is_buyable(self) -> bool:
+        return self.is_active and self.stock > 0 and self.price is not None
 
 
 class ProductImage(models.Model):
@@ -111,12 +175,15 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.tracking_code:
-            # Generate tracking code: ZHINAD-YYYYMMDD-XXXXX
-            from datetime import datetime
-            import random
-            date_str = datetime.now().strftime('%Y%m%d')
-            random_num = random.randint(10000, 99999)
-            self.tracking_code = f"ZHINAD-{date_str}-{random_num}"
+            # Short, readable, non-incremental tracking code (collision-checked)
+            alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"  # no 0/O, 1/I/L
+            while True:
+                part1 = "".join(secrets.choice(alphabet) for _ in range(4))
+                part2 = "".join(secrets.choice(alphabet) for _ in range(4))
+                code = f"ZH-{part1}-{part2}"
+                if not Order.objects.filter(tracking_code=code).exists():
+                    self.tracking_code = code
+                    break
         super().save(*args, **kwargs)
 
 
@@ -171,6 +238,126 @@ class BlogPost(models.Model):
         super().save(*args, **kwargs)
 
 
+class ContentPage(models.Model):
+    PAGE_TYPE_CHOICES = [
+        ("about", "درباره ما"),
+        ("contact", "تماس با ما"),
+        ("blog_post", "پست مجله"),
+    ]
+
+    page_type = models.CharField(max_length=20, choices=PAGE_TYPE_CHOICES, verbose_name="نوع صفحه")
+    title = models.CharField(max_length=200, verbose_name="عنوان")
+    slug = models.SlugField(max_length=200, unique=True, blank=True, verbose_name="نامک")
+
+    # Blog-like fields (used when page_type == blog_post)
+    excerpt = models.TextField(max_length=300, blank=True, verbose_name="خلاصه")
+    featured_image = models.ImageField(upload_to="content/featured/", blank=True, null=True, verbose_name="تصویر شاخص")
+    author = models.CharField(max_length=100, blank=True, default="تیم ژیناد", verbose_name="نویسنده")
+    is_published = models.BooleanField(default=True, verbose_name="منتشر شده")
+    published_at = models.DateTimeField(default=timezone.now, verbose_name="تاریخ انتشار")
+    views = models.IntegerField(default=0, verbose_name="تعداد بازدید")
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ایجاد")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
+
+    class Meta:
+        verbose_name = "صفحه محتوا"
+        verbose_name_plural = "صفحات محتوا"
+        ordering = ["-published_at", "-created_at"]
+
+    def __str__(self):
+        return f"{self.get_page_type_display()}: {self.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title, allow_unicode=True)
+        super().save(*args, **kwargs)
+
+
+class ContentBlock(models.Model):
+    BLOCK_TYPE_CHOICES = [
+        ("heading", "عنوان"),
+        ("rich_html", "متن (HTML)"),
+        ("image", "تصویر"),
+        ("callout", "کادر برجسته"),
+        ("divider", "جداکننده"),
+    ]
+
+    page = models.ForeignKey(ContentPage, related_name="blocks", on_delete=models.CASCADE, verbose_name="صفحه")
+    parent = models.ForeignKey(
+        "self",
+        related_name="children",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="والد",
+    )
+    order = models.PositiveIntegerField(default=0, verbose_name="ترتیب")
+
+    block_type = models.CharField(max_length=20, choices=BLOCK_TYPE_CHOICES, verbose_name="نوع بلاک")
+    title = models.CharField(max_length=200, blank=True, verbose_name="عنوان")
+    body_html = models.TextField(blank=True, verbose_name="محتوا (HTML)")
+    image = models.ImageField(upload_to="content/blocks/", blank=True, null=True, verbose_name="تصویر")
+    caption = models.CharField(max_length=300, blank=True, verbose_name="کپشن")
+
+    class Meta:
+        verbose_name = "بلاک محتوا"
+        verbose_name_plural = "بلاک‌های محتوا"
+        ordering = ["parent_id", "order", "id"]
+
+    def __str__(self):
+        return f"{self.get_block_type_display()} - {self.title or self.id}"
+
+    @staticmethod
+    def sanitize_html(value: str) -> str:
+        if not value:
+            return ""
+        if bleach is None:
+            # Fail closed: if bleach isn't available, show plain text (no HTML).
+            return (
+                value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+            )
+
+        allowed_tags = [
+            "p",
+            "br",
+            "strong",
+            "em",
+            "ul",
+            "ol",
+            "li",
+            "a",
+            "h2",
+            "h3",
+            "h4",
+            "blockquote",
+            "hr",
+        ]
+        allowed_attrs = {
+            "a": ["href", "title"],
+        }
+        cleaned = bleach.clean(
+            value,
+            tags=allowed_tags,
+            attributes=allowed_attrs,
+            strip=True,
+        )
+        return cleaned
+
+    @property
+    def body_html_safe(self):
+        return mark_safe(self.body_html)
+
+    def save(self, *args, **kwargs):
+        if self.parent_id and self.page_id != self.parent.page_id:
+            self.page_id = self.parent.page_id
+        if self.block_type in ("rich_html", "callout") and self.body_html:
+            self.body_html = self.sanitize_html(self.body_html)
+        super().save(*args, **kwargs)
+
+
 class SiteSettings(models.Model):
     """Site-wide settings"""
     card_number = models.CharField(max_length=16, verbose_name='شماره کارت دریافت وجه')
@@ -182,7 +369,9 @@ class SiteSettings(models.Model):
 
     # Telegram Bot Settings
     telegram_bot_token = models.CharField(max_length=200, blank=True, verbose_name='توکن ربات تلگرام')
-    telegram_chat_id = models.CharField(max_length=100, blank=True, verbose_name='Chat ID تلگرام')
+
+    # Bale Bot Settings
+    bale_bot_token = models.CharField(max_length=200, blank=True, verbose_name='توکن ربات بله')
 
     class Meta:
         verbose_name = 'تنظیمات سایت'
@@ -190,3 +379,27 @@ class SiteSettings(models.Model):
 
     def __str__(self):
         return "تنظیمات سایت"
+
+
+class NotificationRecipient(models.Model):
+    """Recipients for order notifications"""
+    PLATFORM_CHOICES = [
+        ('telegram', 'تلگرام'),
+        ('bale', 'بله'),
+    ]
+
+    name = models.CharField(max_length=200, verbose_name='نام گیرنده')
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES, verbose_name='پلتفرم')
+    chat_id = models.CharField(max_length=100, verbose_name='شناسه چت')
+    is_active = models.BooleanField(default=True, verbose_name='فعال')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
+
+    class Meta:
+        verbose_name = 'گیرنده اعلان'
+        verbose_name_plural = 'گیرندگان اعلان'
+        ordering = ['platform', 'name']
+
+    def __str__(self):
+        status = "فعال" if self.is_active else "غیرفعال"
+        return f"{self.name} ({self.get_platform_display()}) - {status}"

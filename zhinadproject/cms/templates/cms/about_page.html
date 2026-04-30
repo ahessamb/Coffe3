@@ -1,0 +1,22 @@
+{% extends "website/base.html" %}
+
+{% block title %}{{ page.title }} - ژیناد{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>{{ page.title }}</h1>
+  </div>
+</div>
+
+<section class="cms-page-section">
+  <div class="container">
+    <div class="cms-content">
+      {% for block in page.body %}
+        {% include_block block %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+

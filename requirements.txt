@@ -1,1 +1,5 @@
 Django~=6.0.2
+wagtail
+django-nested-admin
+django-tinymce
+bleach

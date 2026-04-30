@@ -1,0 +1,24 @@
+{% extends 'website/base.html' %}
+
+{% block title %}{{ page.title }} - ژیناد{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1>{{ page.title }}</h1>
+    </div>
+</div>
+
+<section class="content-page">
+    <div class="container">
+        <div class="content-prose">
+            {% for block in blocks %}
+                {% include 'website/partials/content_block.html' with block=block %}
+            {% empty %}
+                <p class="no-products">محتوایی برای نمایش وجود ندارد.</p>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
