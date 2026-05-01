@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,16 +21,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-^i6k5^#_fm08l#f@yfhh&lk_%+)31(4g+9b1kxvs!n%lm98h)3"
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "herecode",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DJANGO_DEBUG", "1") in ("1", "true", "True", "yes", "YES")
 
-# Allow local/dev hosts (incl. Docker)
+# Allow local/dev hosts (incl. Docker) + production domain(s)
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "0.0.0.0",
+    "zhinad.ir",
+    "www.zhinad.ir",
 ]
 
 # Wagtail admin base URL (needed for correct admin links)

@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.DS_Store
+
+.env
+.env.*
+
+.venv/
+venv/
+env/
+
+*.log
+
+# Django
+db.sqlite3
+zhinadproject/db.sqlite3
+#media/
+#zhinadproject/media/
+#staticfiles/
+#zhinadproject/staticfiles/
+
+# IDE
+.idea/
+.vscode/

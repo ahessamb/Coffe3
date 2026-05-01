@@ -1,0 +1,21 @@
+---
+deployment:
+  tasks:
+    # cPanel runs these on each "Deploy".
+    # Adjust DEPLOYPATH to your app directory if needed.
+    - export DEPLOYPATH=$HOME/zhinad_app
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/rsync -a --delete --exclude ".git" ./ $DEPLOYPATH/
+
+    # Create/refresh venv + install deps
+    - /usr/bin/python3 -m venv $DEPLOYPATH/venv || true
+    - $DEPLOYPATH/venv/bin/pip install --upgrade pip
+    - $DEPLOYPATH/venv/bin/pip install -r $DEPLOYPATH/requirements.txt
+
+    # Django deploy steps
+    - $DEPLOYPATH/venv/bin/python $DEPLOYPATH/zhinadproject/manage.py migrate --noinput
+    - $DEPLOYPATH/venv/bin/python $DEPLOYPATH/zhinadproject/manage.py collectstatic --noinput
+
+    # Restart Passenger app if present (harmless if not configured)
+    - /bin/mkdir -p $DEPLOYPATH/tmp
+    - /usr/bin/touch $DEPLOYPATH/tmp/restart.txt
