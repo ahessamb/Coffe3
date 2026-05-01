@@ -28,15 +28,17 @@ SECRET_KEY = os.environ.get(
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") in ("1", "true", "True", "yes", "YES")
-
-# Allow local/dev hosts (incl. Docker) + production domain(s)
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "0.0.0.0",
     "zhinad.ir",
+    "zhinadcoffee.ir",
+    "www.zhinadcoffee.ir",
     "www.zhinad.ir",
 ]
+
+# Allow local/dev hosts (incl. Docker) + production domain(s)
 
 # Wagtail admin base URL (needed for correct admin links)
 WAGTAILADMIN_BASE_URL = "http://localhost:8000"

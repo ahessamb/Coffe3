@@ -1,4 +1,4 @@
-## Deploy to IranHost (cPanel) for `zhinad.ir`
+## Deploy to IranHost (cPanel) for `zhinadcoffee.ir`
 
 ### 0) One-time: make sure your repo is clean
 cPanel Git deploy refuses if the checked-out branch has local changes.
@@ -15,7 +15,7 @@ In cPanel:
 - Create an app:
   - **Python**: 3.x (whatever IranHost provides)
   - **Application root**: `zhinad_app`
-  - **Application URL**: choose the domain `zhinad.ir` (or the subdomain you want)
+  - **Application URL**: choose the domain `zhinadcoffee.ir` (or the subdomain you want)
   - **Application startup file**: `passenger_wsgi.py`
   - **Application entry point**: `application`
 
@@ -50,8 +50,8 @@ When you click **Deploy**, cPanel will:
 
 ### 4) After deploy: verify
 Visit:
-- `https://zhinad.ir/` (home)
-- `https://zhinad.ir/admin/` (Django admin)
+- `https://zhinadcoffee.ir/` (home)
+- `https://zhinadcoffee.ir/admin/` (Django admin)
 
 If admin doesn’t load, check:
 - cPanel **Errors** / **Application logs**
