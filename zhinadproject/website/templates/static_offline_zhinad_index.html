@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="fa" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Zhinad Coffee | قهوه ژیناد – قهوه‌های تخصصی و ارسال رایگان در مشهد">
+  <title>Zhinad Coffee | قهوه ژیناد</title>
+  <!-- Font Awesome 6 (free icons, minimal and clean) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Google Fonts: modern sans for English + support for Persian -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #faf7f2;   /* soft warm neutral background */
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Tahoma', 'Vazirmatn', sans-serif;
+      color: #1f1e1c;
+      line-height: 1.5;
+      padding: 2rem 1.5rem;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* main card — minimal, airy, classy */
+    .coffee-card {
+      max-width: 880px;
+      width: 100%;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 2rem;
+      box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .inner {
+      padding: 2.5rem 2rem;
+    }
+
+    /* header area with bilingual identity */
+    .brand {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid #ece6dc;
+      padding-bottom: 1.8rem;
+    }
+
+    .brand h1 {
+      font-size: 2.7rem;
+      font-weight: 550;
+      letter-spacing: -0.02em;
+      color: #2b2a27;
+      margin-bottom: 0.3rem;
+    }
+
+    .brand .persian-name {
+      font-size: 1.8rem;
+      font-weight: 450;
+      color: #7a5b3e;
+      font-family: 'Inter', 'Vazirmatn', system-ui, 'Tahoma', sans-serif;
+      letter-spacing: -0.3px;
+      margin-top: 0.2rem;
+    }
+
+    /* subtle accent line */
+    .accent-line {
+      width: 60px;
+      height: 2px;
+      background: #d9c7b0;
+      margin: 1rem auto 0;
+      border-radius: 2px;
+    }
+
+    /* contact grid — minimal & structured */
+    .contact-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1.8rem;
+      margin-bottom: 2.8rem;
+      background: #fefcf9;
+      padding: 1.2rem 1rem;
+      border-radius: 1.5rem;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1rem;
+      font-weight: 450;
+      color: #2c2b29;
+      background: transparent;
+      padding: 0.25rem 0;
+    }
+
+    .contact-item i {
+      font-size: 1.3rem;
+      width: 1.8rem;
+      color: #a77b4a;
+      text-align: center;
+    }
+
+    .contact-item span {
+      word-break: break-word;
+    }
+
+    /* info cards (address + delivery) */
+    .info-block {
+      display: flex;
+      flex-direction: column;
+      gap: 1.6rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .info-card {
+      background-color: #fefbf7;
+      border-radius: 1.2rem;
+      padding: 1.3rem 1.6rem;
+      border: 1px solid #f0e9e0;
+      transition: box-shadow 0.1s ease;
+    }
+
+    .info-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: -0.2px;
+      margin-bottom: 0.6rem;
+      color: #7a5b3e;
+    }
+
+    .info-icon i {
+      font-size: 1.2rem;
+    }
+
+    .info-text {
+      font-size: 1rem;
+      line-height: 1.55;
+      color: #2b2a27;
+      font-weight: 450;
+      word-break: break-word;
+    }
+
+    .delivery-note {
+      margin-top: 0.6rem;
+      font-size: 0.9rem;
+      color: #6c5b4a;
+      border-left: 2px solid #e2cfb8;
+      padding-left: 0.8rem;
+      font-weight: 440;
+    }
+
+    /* social / join rubika section — elegant soft */
+    .join-section {
+      background: #ffffff;
+      border-radius: 1.4rem;
+      padding: 1.6rem;
+      margin-top: 0.5rem;
+      border: 1px solid #efe5da;
+    }
+
+    .join-heading {
+      font-size: 1rem;
+      font-weight: 530;
+      color: #2b2a27;
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.4rem;
+    }
+
+    .persian-desc {
+      font-family: 'Inter', 'Vazirmatn', system-ui, 'Tahoma', sans-serif;
+      font-weight: 470;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: #3d3a35;
+    }
+
+    .messenger-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+
+    .messenger-card {
+      flex: 1;
+      min-width: 180px;
+      background: #faf6f0;
+      border-radius: 1rem;
+      padding: 0.8rem 1rem;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      border: 1px solid #e8dfd3;
+    }
+
+    .messenger-card i {
+      font-size: 1.6rem;
+      width: 2rem;
+      color: #a77b4a;
+    }
+
+    .messenger-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messenger-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: -0.2px;
+    }
+
+    .messenger-id {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #7e6a54;
+      background: #fff6ed;
+      padding: 0.15rem 0.4rem;
+      border-radius: 40px;
+      display: inline-block;
+      margin-top: 0.2rem;
+    }
+
+    /* preserve click but looks minimal, no aggressive underline */
+    .messenger-card:hover {
+      background-color: #fff9f2;
+      border-color: #d7c2ab;
+      transition: 0.2s;
+    }
+
+    /* footer hint */
+    .footer-note {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.7rem;
+      color: #b7a68e;
+      letter-spacing: 0.3px;
+      border-top: 1px solid #efebe4;
+      padding-top: 1.6rem;
+    }
+
+    /* responsive fine-tuning */
+    @media (max-width: 640px) {
+      body {
+        padding: 1rem;
+      }
+      .inner {
+        padding: 1.6rem 1.2rem;
+      }
+      .brand h1 {
+        font-size: 2rem;
+      }
+      .brand .persian-name {
+        font-size: 1.4rem;
+      }
+      .contact-grid {
+        gap: 1.2rem;
+        justify-content: flex-start;
+      }
+      .contact-item {
+        font-size: 0.9rem;
+        flex: 1 1 200px;
+      }
+      .messenger-row {
+        flex-direction: column;
+      }
+      .info-card {
+        padding: 1rem;
+      }
+    }
+
+    /* extra refinement for persian text readability */
+    .persian-text {
+      font-family: 'Inter', 'Vazirmatn', system-ui, 'Tahoma', sans-serif;
+      font-weight: 450;
+    }
+
+    a, .no-link-style {
+      text-decoration: none;
+    }
+
+    /* ensure all external links are classy but accessible */
+    .messenger-card {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<div class="coffee-card">
+  <div class="inner">
+    <!-- Brand bilingual -->
+    <div class="brand">
+      <h1>Zhinad Coffee</h1>
+      <div class="persian-name">قهوه ژیناد</div>
+      <div class="accent-line"></div>
+    </div>
+
+    <!-- Contact details: phone, web, social handle -->
+    <div class="contact-grid">
+      <div class="contact-item">
+        <i class="fas fa-mobile-alt"></i>
+        <span>09154848754</span>
+      </div>
+      <div class="contact-item">
+        <i class="fas fa-phone-alt"></i>
+        <span>05137264339</span>
+      </div>
+      <div class="contact-item">
+        <i class="fas fa-globe"></i>
+        <span>www.zhinad.ir</span>
+      </div>
+      <div class="contact-item">
+        <i class="fas fa-paper-plane"></i>
+        <span>zhinadcoffee</span>
+      </div>
+    </div>
+
+    <!-- Address & free delivery info -->
+    <div class="info-block">
+      <div class="info-card">
+        <div class="info-icon">
+          <i class="fas fa-location-dot"></i>
+          <span> نشانی</span>
+        </div>
+        <div class="info-text persian-text">
+          ❇️ مشهد، مطهری شمالی ۱، سمت چپ، قطعه ششم
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">
+          <i class="fas fa-truck-fast"></i>
+          <span> ارسال رایگان</span>
+        </div>
+        <div class="info-text persian-text">
+          ❇️ ارسال رایگان در مشهد (محدوده شهری)
+        </div>
+        <div class="delivery-note persian-text">
+          برای خریدهای بیش از ۴ میلیون تومان
+        </div>
+      </div>
+    </div>
+
+    <!-- Join rubika / bale channel section (minimal & classy) -->
+    <div class="join-section">
+      <div class="join-heading">
+        <i class="fas fa-heart" style="color: #b47c48; font-size: 1rem;"></i>
+        <span class="persian-desc">
+          ❇️ برای اطلاع از قیمتها؛ آشنایی با محصولات جدید، آموزش‌های قهوه و تخفیف‌های ویژه به کانال روبیکای ما بپیوندید:
+        </span>
+      </div>
+      
+      <div class="messenger-row">
+        <!-- Rubika messenger (external link, but designed elegantly) -->
+        <a href="https://rubika.ir/zhinadcoffee" target="_blank" rel="noopener noreferrer" class="messenger-card">
+          <i class="fab fa-telegram-plane" style="transform: rotate(0deg);"></i>
+          <!-- using paper-plane like for rubika style, but clean -->
+          <div class="messenger-info">
+            <span class="messenger-name">پیام رسان روبیکا</span>
+            <span class="messenger-id">@zhinadcoffee</span>
+          </div>
+          <i class="fas fa-external-link-alt" style="font-size: 0.7rem; opacity: 0.6; margin-left: auto;"></i>
+        </a>
+        
+        <!-- Bale (ble.ir) messenger -->
+        <a href="https://ble.ir/zhinadcoffee" target="_blank" rel="noopener noreferrer" class="messenger-card">
+          <i class="fas fa-comment-dots"></i>
+          <div class="messenger-info">
+            <span class="messenger-name">پیام رسان بله</span>
+            <span class="messenger-id">@zhinadcoffee</span>
+          </div>
+          <i class="fas fa-external-link-alt" style="font-size: 0.7rem; opacity: 0.6; margin-left: auto;"></i>
+        </a>
+      </div>
+      <!-- subtle note with both links clarified as invites (no internal page links) -->
+      <div style="font-size: 0.7rem; margin-top: 1rem; color: #bbaa95; text-align: center; letter-spacing: 0.2px;">
+        <i class="fas fa-hashtag"></i> zhinadcoffee
+      </div>
+    </div>
+
+    <!-- Small footer elegance: bilingual note, no spam -->
+    <div class="footer-note">
+      <span>Zhinad Coffee</span> — <span class="persian-text">قهوه‌های خاص با طعم اصالت</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
