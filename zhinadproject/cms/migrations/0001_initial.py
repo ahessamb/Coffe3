@@ -10,7 +10,8 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("wagtailcore", "0096_referenceindex_referenceindex_source_object_and_more"),
+        # This project targets Wagtail 6.4.x, where the latest core migration is 0094.
+        ("wagtailcore", "0094_alter_page_locale"),
         ("wagtailimages", "0027_image_description"),
     ]
 
