@@ -10,7 +10,8 @@ def _to_basic_html(text: str) -> str:
     # Convert plain text to minimal HTML paragraphs.
     # Keep it simple and robust for migration purposes.
     parts = [p.strip() for p in text.replace("\r\n", "\n").split("\n\n") if p.strip()]
-    return "".join(f"<p>{p.replace('\n', '<br>')}</p>" for p in parts)
+    nl = "\n"
+    return "".join(f"<p>{p.replace(nl, '<br>')}</p>" for p in parts)
 
 
 def forwards(apps, schema_editor):

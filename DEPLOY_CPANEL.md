@@ -164,6 +164,8 @@ If `pip install` fails on `Pillow` or `PyMySQL`, use **Setup Python App** → **
 Creating the Python app with Application URL `/` usually sets the document root to `~/Coffe3/zhinadproject`.  
 Verify:
 
+(note: in my tests it points to public_html and still works!)
+
 1. **Domains** → **Domains** (or **Addon Domains**)
 2. `zhinadcoffee.ir` → **Document Root** should be something like:
 
@@ -191,6 +193,8 @@ If cPanel will not share a document root between domains, set `zhinad.ir` as a *
 
 Ensure `WAGTAILADMIN_BASE_URL` uses `https://`.
 
+(note: I just issued ceritifcate for main domain zhinadcoffe.ir, could not to do it for zhinad.ir rn!)
+
 ---
 
 ## Phase 7 — Restart the app
@@ -216,6 +220,7 @@ touch ~/Coffe3/zhinadproject/tmp/restart.txt
 5. **Port** `443` if there is a port field and you use HTTPS
 6. Save
 
+(note: i could not edit the default site, it has been set on localhost and is not modifyable)
 ---
 
 ## Phase 9 — Verify
