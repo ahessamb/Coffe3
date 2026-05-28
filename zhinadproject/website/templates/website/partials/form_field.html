@@ -1,0 +1,26 @@
+{% load widget_tweaks %}
+
+<div class="form-group">
+    <label for="{{ field.id_for_label }}" class="form-label">
+        {{ field.label }}
+        {% if field.field.required %}<span class="required" aria-label="الزامی">*</span>{% endif %}
+    </label>
+    
+    {% if field|field_type == 'textarea' %}
+        {% include_valu field class="form-textarea" %}
+    {% elif field|field_type == 'select' %}
+        {% include_valu field class="form-select" %}
+    {% else %}
+        {% include_valu field class="form-input" %}
+    {% endif %}
+    
+    {% if hint %}
+    <p class="field-hint">{{ hint }}</p>
+    {% endif %}
+    
+    {% if field.errors %}
+        {% for error in field.errors %}
+        <span class="field-error">{{ error }}</span>
+        {% endfor %}
+    {% endif %}
+</div>

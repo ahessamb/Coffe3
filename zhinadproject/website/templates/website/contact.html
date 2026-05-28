@@ -6,18 +6,26 @@
 <div class="page-header">
     <div class="container">
         <h1>تماس با ما</h1>
+        <p class="page-lead">خوشحال می‌شویم صدای شما را بشنویم — از راه‌های زیر با ما در ارتباط باشید.</p>
     </div>
 </div>
 
 <section class="contact-section">
     <div class="container">
-        <div class="contact-info">
+        <div class="contact-grid">
             {% if settings %}
             <div class="info-card">
-                <h3>اطلاعات تماس</h3>
-                <p><strong>تلفن:</strong> {{ settings.contact_phone }}</p>
+                <h3>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    اطلاعات تماس
+                </h3>
+                {% if settings.contact_phone %}
+                <p><strong>تلفن:</strong> <a href="tel:{{ settings.contact_phone }}">{{ settings.contact_phone }}</a></p>
+                {% endif %}
                 {% if settings.contact_email %}
-                <p><strong>ایمیل:</strong> {{ settings.contact_email }}</p>
+                <p><strong>ایمیل:</strong> <a href="mailto:{{ settings.contact_email }}">{{ settings.contact_email }}</a></p>
                 {% endif %}
                 {% if settings.address %}
                 <p><strong>آدرس:</strong> {{ settings.address }}</p>
@@ -26,9 +34,26 @@
             {% endif %}
 
             <div class="info-card">
-                <h3>ساعات کاری</h3>
+                <h3>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    ساعات کاری
+                </h3>
                 <p>شنبه تا پنج‌شنبه: ۹ صبح تا ۹ شب</p>
                 <p>جمعه: تعطیل</p>
+            </div>
+
+            <div class="info-card">
+                <h3>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M12 22s7-6.5 7-13a7 7 0 1 0-14 0c0 6.5 7 13 7 13z"/>
+                        <circle cx="12" cy="9" r="2.5"/>
+                    </svg>
+                    مراجعه حضوری
+                </h3>
+                <p>برای بازدید از فروشگاه، صفحه <a href="{% url 'website:location' %}">نشانی ما</a> را ببینید.</p>
             </div>
         </div>
     </div>

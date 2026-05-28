@@ -3,51 +3,94 @@
 {% block title %}نشانی ما - ژیناد{% endblock %}
 
 {% block content %}
+<!-- Page Header -->
 <div class="page-header">
     <div class="container">
         <h1>نشانی ما</h1>
+        <p class="page-lead">ما را در نقشه پیدا کنید و برای مسیریابی یکی از گزینه‌ها را انتخاب کنید.</p>
     </div>
 </div>
 
-<section class="location-section">
+<!-- Location Section -->
+<section class="location-section" style="padding: var(--space-11) var(--container-px);">
     <div class="container">
         {% if site_settings and site_settings.address %}
         <div class="location-grid">
+            <!-- Location Info -->
             <div class="location-info">
-                <h2 class="section-title">نشانی</h2>
-                <p class="location-address">{{ site_settings.address }}</p>
+                <h2 style="margin-bottom: var(--space-7);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" aria-hidden="true" style="display: inline; margin-left: 8px; vertical-align: text-bottom; color: var(--color-gold);">
+                        <path d="M12 22s7-6.5 7-13a7 7 0 1 0-14 0c0 6.5 7 13 7 13z"/>
+                        <circle cx="12" cy="9" r="2.5"/>
+                    </svg>
+                    نشانی
+                </h2>
 
+                <!-- Address Display -->
+                <div style="background: var(--bg-secondary); padding: var(--space-6); border-radius: var(--radius-lg); margin-bottom: var(--space-7);">
+                    <p class="location-address" style="margin: 0; font-size: 1.1rem; line-height: 2; color: var(--text-secondary);">{{ site_settings.address }}</p>
+                </div>
+
+                <!-- Location Links -->
                 {% if site_settings.address_lat != None and site_settings.address_lng != None %}
-                <div class="location-links" aria-label="لینک‌های نقشه">
-                    <a class="location-link" target="_blank" rel="noopener"
-                       href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address_lat }},{{ site_settings.address_lng }}">
-                        باز کردن در گوگل‌مپ
+                <div class="location-links" aria-label="لینک‌های نقشه" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3);">
+                    <a class="location-link" target="_blank" rel="noopener noreferrer"
+                       href="https://www.google.com/maps/search/?api=1&query={{ site_settings.address_lat }},{{ site_settings.address_lng }}"
+                       title="باز کردن در گوگل‌مپ" 
+                       style="display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-4); background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); color: var(--text-secondary); text-decoration: none; transition: all var(--transition-base);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" aria-hidden="true">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="M20 20l-2.2-2.2"/>
+                        </svg>
+                        <span style="font-weight: 600; font-size: 0.9rem;">گوگل‌مپ</span>
                     </a>
-                    <a class="location-link" target="_blank" rel="noopener"
-                       href="https://www.google.com/maps/dir/?api=1&destination={{ site_settings.address_lat }},{{ site_settings.address_lng }}">
-                        مسیریابی
+                    
+                    <a class="location-link" target="_blank" rel="noopener noreferrer"
+                       href="https://www.google.com/maps/dir/?api=1&destination={{ site_settings.address_lat }},{{ site_settings.address_lng }}"
+                       title="مسیریابی"
+                       style="display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-4); background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); color: var(--text-secondary); text-decoration: none; transition: all var(--transition-base);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" aria-hidden="true">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        <span style="font-weight: 600; font-size: 0.9rem;">مسیریابی</span>
                     </a>
-                    <a class="location-link" target="_blank" rel="noopener"
-                       href="https://nshn.ir/?lat={{ site_settings.address_lat }}&lng={{ site_settings.address_lng }}">
-                        باز کردن در نشان
+                    
+                    <a class="location-link" target="_blank" rel="noopener noreferrer"
+                       href="https://nshn.ir/?lat={{ site_settings.address_lat }}&lng={{ site_settings.address_lng }}"
+                       title="نشان"
+                       style="display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-4); background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); color: var(--text-secondary); text-decoration: none; transition: all var(--transition-base);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="1"/>
+                            <path d="M12 1v22M1 12h22"/>
+                        </svg>
+                        <span style="font-weight: 600; font-size: 0.9rem;">نشان</span>
                     </a>
                 </div>
                 {% endif %}
             </div>
 
+            <!-- Map -->
             {% if site_settings.address_lat != None and site_settings.address_lng != None %}
-            <div class="location-map" aria-label="نقشه">
+            <div class="location-map" aria-label="نقشه ژیناد" style="aspect-ratio: 1; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-lg); background: var(--bg-secondary);">
                 <iframe
-                    title="نقشه ژیناد"
+                    title="نقشه موقعیت ژیناد"
                     loading="lazy"
                     referrerpolicy="no-referrer-when-downgrade"
-                    src="https://www.google.com/maps?q={{ site_settings.address_lat }},{{ site_settings.address_lng }}&z=16&output=embed">
+                    src="https://www.google.com/maps?q={{ site_settings.address_lat }},{{ site_settings.address_lng }}&z=16&output=embed"
+                    style="width: 100%; height: 100%; border: none;">
                 </iframe>
             </div>
             {% endif %}
         </div>
         {% else %}
-        <p class="no-products">نشانی هنوز ثبت نشده است.</p>
+        <!-- No Address Message -->
+        <div style="text-align: center; padding: var(--space-11) var(--space-4);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="60" height="60" opacity="0.3" aria-hidden="true" style="margin: 0 auto var(--space-4); display: block;">
+                <path d="M12 22s7-6.5 7-13a7 7 0 1 0-14 0c0 6.5 7 13 7 13z"/>
+                <circle cx="12" cy="9" r="2.5"/>
+            </svg>
+            <p class="no-products">نشانی هنوز ثبت نشده است.</p>
+        </div>
         {% endif %}
     </div>
 </section>

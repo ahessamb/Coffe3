@@ -3,30 +3,48 @@
 {% block title %}محصولات - ژیناد{% endblock %}
 
 {% block content %}
+<!-- Page Header -->
 <div class="page-header">
     <div class="container">
         <h1>محصولات ما</h1>
+        <p class="page-lead">قهوه و شکلات دست‌ساز با کیفیت ممتاز — فیلتر کنید و محصول دلخواهتان را پیدا کنید.</p>
     </div>
 </div>
 
+<!-- Products Section -->
 <section class="products-section">
     <div class="container">
         <!-- Filters -->
-        <form method="get" class="products-filters">
+        <form method="get" class="products-filters" aria-label="فیلتر محصولات">
             <div class="filters-row">
+                <!-- Category Filter -->
                 <div class="filter-group">
-                    <label>دسته‌بندی</label>
-                    <select name="category" class="form-input">
-                        <option value="" {% if not selected_category %}selected{% endif %}>همه</option>
+                    <label for="filter-category">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        دسته‌بندی
+                    </label>
+                    <select name="category" id="filter-category" class="form-input">
+                        <option value="" {% if not selected_category %}selected{% endif %}>همه دسته‌ها</option>
                         {% for cat in categories %}
                         <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>{{ cat.title }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
+                <!-- Sort Filter -->
                 <div class="filter-group">
-                    <label>مرتب‌سازی</label>
-                    <select name="sort" class="form-input">
+                    <label for="filter-sort">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                            <path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/>
+                        </svg>
+                        مرتب‌سازی
+                    </label>
+                    <select name="sort" id="filter-sort" class="form-input">
                         <option value="newest" {% if sort == "newest" %}selected{% endif %}>جدیدترین</option>
                         <option value="oldest" {% if sort == "oldest" %}selected{% endif %}>قدیمی‌ترین</option>
                         <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>ارزان‌ترین</option>
@@ -34,26 +52,53 @@
                     </select>
                 </div>
 
+                <!-- Min Price Filter -->
                 <div class="filter-group">
-                    <label>حداقل قیمت</label>
-                    <input type="number" name="min_price" class="form-input" value="{{ min_price }}" placeholder="مثلاً 100000">
+                    <label for="filter-min-price">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        حداقل قیمت
+                    </label>
+                    <input type="number" name="min_price" id="filter-min-price" class="form-input" value="{{ min_price }}" placeholder="به تومان" inputmode="numeric">
+                    <p class="field-hint">اختیاری</p>
                 </div>
 
+                <!-- Max Price Filter -->
                 <div class="filter-group">
-                    <label>حداکثر قیمت</label>
-                    <input type="number" name="max_price" class="form-input" value="{{ max_price }}" placeholder="مثلاً 500000">
+                    <label for="filter-max-price">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        حداکثر قیمت
+                    </label>
+                    <input type="number" name="max_price" id="filter-max-price" class="form-input" value="{{ max_price }}" placeholder="به تومان" inputmode="numeric">
+                    <p class="field-hint">اختیاری</p>
                 </div>
 
+                <!-- Filter Actions -->
                 <div class="filter-actions">
-                    <button type="submit" class="btn btn-primary">اعمال</button>
-                    <a href="{% url 'website:products' %}" class="btn btn-outline">پاک کردن</a>
+                    <button type="submit" class="btn btn-primary" title="اعمال فیلتر‌ها">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        اعمال فیلتر
+                    </button>
+                    <a href="{% url 'website:products' %}" class="btn btn-outline" title="پاک کردن تمام فیلتر‌ها">پاک کردن</a>
                 </div>
             </div>
 
+            <!-- Tags Filter -->
             {% if tags %}
             <div class="filters-row tags-row">
                 <div class="filter-group">
-                    <label>برچسب‌ها</label>
+                    <label>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                            <circle cx="8" cy="8" r="1.5"/>
+                        </svg>
+                        برچسب‌ها
+                    </label>
                     <div class="tags-filter">
                         {% for tag in tags %}
                         <label class="tag-check">
@@ -66,38 +111,50 @@
             </div>
             {% endif %}
         </form>
-        
+
         <!-- Products Grid -->
         <div class="products-grid">
             {% for product in products %}
             <div class="product-card">
-                <a href="{% url 'website:product_detail' product.slug %}">
+                <a href="{% url 'website:product_detail' product.slug %}" class="product-link" aria-label="مشاهده {{ product.title }}">
                     <div class="product-image">
                         {% if product.main_image %}
-                        <img src="{{ product.main_image.url }}" alt="{{ product.title }}">
+                        <img src="{{ product.main_image.url }}" alt="{{ product.title }}" loading="lazy" decoding="async">
+                        {% else %}
+                        <div style="aspect-ratio: 1; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-muted);">بدون تصویر</div>
                         {% endif %}
+                        
                         {% if product.stock == 0 %}
                         <span class="badge out-of-stock">ناموجود</span>
                         {% endif %}
                     </div>
+                    
                     <div class="product-info">
                         <h3 class="product-title">{{ product.title }}</h3>
                         {% if product.subtitle %}
                         <p class="product-subtitle">{{ product.subtitle }}</p>
                         {% endif %}
+                        
                         <p class="product-meta">
-                            <span class="meta-item">{{ product.category.title }}</span>
+                            <span class="meta-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" aria-hidden="true" style="display: inline; margin-left: 2px; vertical-align: text-bottom;">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                </svg>
+                                {{ product.category.title }}
+                            </span>
                             {% with product.tags.all as tag_list %}
                                 {% if tag_list %}
                                 <span class="meta-sep">•</span>
                                 <span class="meta-item">
-                                    {% for t in tag_list %}
-                                        {{ t.title }}{% if not forloop.last %}، {% endif %}
-                                    {% endfor %}
+                                    {% for t in tag_list %}{{ t.title }}{% if not forloop.last %}، {% endif %}{% endfor %}
                                 </span>
                                 {% endif %}
                             {% endwith %}
                         </p>
+                        
                         {% if product.price != None %}
                         <p class="product-price">{{ product.price|floatformat:0 }} تومان</p>
                         {% else %}
@@ -105,34 +162,43 @@
                         {% endif %}
                     </div>
                 </a>
+                
                 {% if product.is_buyable %}
-                <form action="{% url 'website:add_to_cart' product.id %}" method="post">
+                <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form">
                     {% csrf_token %}
                     <div class="add-qty">
-                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input">
-                        <button type="submit" class="btn btn-secondary">افزودن به سبد</button>
+                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input" aria-label="تعداد">
+                        <button type="submit" class="btn btn-secondary" title="افزودن {{ product.title }} به سبد خرید">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+                                <circle cx="9" cy="21" r="1"/>
+                                <circle cx="20" cy="21" r="1"/>
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                            </svg>
+                            افزودن
+                        </button>
                     </div>
+                    {% include 'website/partials/cart_checkout_hint.html' %}
                 </form>
                 {% endif %}
             </div>
             {% empty %}
-            <p class="no-products">محصولی یافت نشد.</p>
+            <p class="no-products">محصولی با این شرایط یافت نشد.</p>
             {% endfor %}
         </div>
-        
+
         <!-- Pagination -->
         {% if is_paginated %}
-        <div class="pagination">
+        <div class="pagination" role="navigation" aria-label="صفحات">
             {% if page_obj.has_previous %}
-            <a href="?page=1{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">اول</a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">قبلی</a>
+            <a href="?page=1{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}" title="صفحه اول">اول</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}" title="صفحه قبلی">قبلی</a>
             {% endif %}
-            
+
             <span class="current-page">صفحه {{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
-            
+
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">بعدی</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}">آخر</a>
+            <a href="?page={{ page_obj.next_page_number }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}" title="صفحه بعدی">بعدی</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_category %}&category={{ selected_category }}{% endif %}{% for t in selected_tags %}&tag={{ t }}{% endfor %}{% if sort %}&sort={{ sort }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}" title="صفحه آخر">آخر</a>
             {% endif %}
         </div>
         {% endif %}

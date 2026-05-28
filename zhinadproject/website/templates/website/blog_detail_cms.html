@@ -1,32 +1,70 @@
 {% extends 'website/base.html' %}
-{% load static %}
 
 {% block title %}{{ page.title }} - مجله ژیناد{% endblock %}
 
 {% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <h1>{{ page.title }}</h1>
+        
+        <!-- Blog Metadata -->
+        <div class="blog-meta">
+            {% if page.author %}
+            <span class="blog-author">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 6px; vertical-align: text-bottom;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                {{ page.author }}
+            </span>
+            {% endif %}
+            
+            <span class="blog-date">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 6px; vertical-align: text-bottom;">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <path d="M16 2v4M8 2v4M3 10h18"/>
+                </svg>
+                {{ page.published_at|date:"j F Y" }}
+            </span>
+            
+            <span class="blog-views">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 6px; vertical-align: text-bottom;">
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                {{ page.views }} بازدید
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Blog Detail Content -->
 <div class="blog-detail">
     <div class="container">
-        <div class="blog-header">
-            <h1>{{ page.title }}</h1>
-            <div class="blog-meta">
-                {% if page.author %}<span>📝 {{ page.author }}</span>{% endif %}
-                <span>📅 {{ page.published_at|date:"j F Y" }}</span>
-                <span>👁 {{ page.views }} بازدید</span>
-            </div>
-        </div>
-
+        <!-- Featured Image -->
         {% if page.featured_image %}
-        <div class="blog-featured-image">
-            <img src="{{ page.featured_image.url }}" alt="{{ page.title }}">
+        <div class="blog-featured-image" style="aspect-ratio: 16/9; overflow: hidden; border-radius: var(--radius-xl); background: var(--bg-secondary); margin-bottom: var(--space-9);">
+            <img src="{{ page.featured_image.url }}" alt="{{ page.title }}" loading="eager" decoding="async" style="width: 100%; height: 100%; object-fit: cover;">
         </div>
         {% endif %}
 
+        <!-- Blog Body with CMS Content -->
         <div class="blog-body content-prose">
             {% for block in blocks %}
                 {% include 'website/partials/content_block.html' with block=block %}
             {% endfor %}
         </div>
+
+        <!-- Back to Blog Link -->
+        <div style="margin-top: var(--space-11); padding-top: var(--space-7); border-top: 1px solid var(--border-light); text-align: center;">
+            <a href="{% url 'website:magazine' %}" class="btn btn-outline">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                    <path d="M15 19l-7-7 7-7"/>
+                </svg>
+                بازگشت به مجله
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}
-

@@ -3,54 +3,96 @@
 {% block title %}مجله - ژیناد{% endblock %}
 
 {% block content %}
+<!-- Page Header -->
 <div class="page-header">
     <div class="container">
         <h1>مجله ژیناد</h1>
-        <p style="color: var(--text-secondary); font-size: 1.2rem; margin-top: 1rem;">
-            داستان‌ها، دستور العمل‌ها و نکات جالب درباره قهوه و شکلات
-        </p>
+        <p class="page-lead">داستان‌ها، دستور العمل‌ها و نکات جالب درباره قهوه و شکلات</p>
     </div>
 </div>
 
+<!-- Blog Section -->
 <section class="blog-section">
     <div class="container">
         <div class="blog-grid">
             {% for post in blog_posts %}
             <article class="blog-card">
-                <a href="{% url 'website:blog_detail' post.slug %}">
-                    <div class="blog-image">
+                <a href="{% url 'website:blog_detail' post.slug %}" class="blog-link" aria-label="مطالعه {{ post.title }}">
+                    <!-- Blog Thumbnail -->
+                    <div class="blog-thumbnail">
                         {% if post.featured_image %}
-                        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}">
+                        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" loading="lazy" decoding="async">
+                        {% else %}
+                        <div style="width: 100%; height: 100%; background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary)); display: flex; align-items: center; justify-content: center;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" opacity="0.3" aria-hidden="true">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                        </div>
                         {% endif %}
                     </div>
-                    <div class="blog-content">
-                        <div class="blog-meta">
-                            <span>📝 {{ post.author }}</span>
-                            <span>📅 {{ post.published_at|date:"j F Y" }}</span>
-                        </div>
-                        <h2 class="blog-title">{{ post.title }}</h2>
-                        <p class="blog-excerpt">{{ post.excerpt }}</p>
-                        <span class="read-more">ادامه مطلب ←</span>
+
+                    <!-- Blog Metadata -->
+                    <div class="blog-meta">
+                        {% if post.author %}
+                        <span class="blog-author">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            {{ post.author }}
+                        </span>
+                        {% endif %}
+                        <span class="blog-date">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                                <path d="M16 2v4M8 2v4M3 10h18"/>
+                            </svg>
+                            {{ post.published_at|date:"j F Y" }}
+                        </span>
                     </div>
+
+                    <!-- Blog Title -->
+                    <h2 class="blog-title">{{ post.title }}</h2>
+
+                    <!-- Blog Excerpt -->
+                    {% if post.excerpt %}
+                    <p class="blog-excerpt">{{ post.excerpt }}</p>
+                    {% endif %}
+
+                    <!-- Read More Link -->
+                    <span class="read-more" style="display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-gold); font-weight: 600; font-size: 0.9rem; margin-top: auto;">
+                        ادامه مطلب
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+                            <path d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </span>
                 </a>
             </article>
             {% empty %}
-            <p class="no-products">به زودی مقالات جدید منتشر می‌شود</p>
+            <div class="no-products" style="grid-column: 1 / -1;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="60" height="60" opacity="0.3" aria-hidden="true">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5l-5 5v-5H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+                </svg>
+                <p>به زودی مقالات جدید منتشر می‌شود</p>
+            </div>
             {% endfor %}
         </div>
 
+        <!-- Pagination -->
         {% if is_paginated %}
-        <div class="pagination">
+        <div class="pagination" role="navigation" aria-label="صفحات">
             {% if page_obj.has_previous %}
-            <a href="?page=1">اول</a>
-            <a href="?page={{ page_obj.previous_page_number }}">قبلی</a>
+            <a href="?page=1" title="صفحه اول">اول</a>
+            <a href="?page={{ page_obj.previous_page_number }}" title="صفحه قبلی">قبلی</a>
             {% endif %}
 
             <span class="current-page">صفحه {{ page_obj.number }} از {{ page_obj.paginator.num_pages }}</span>
 
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">بعدی</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}">آخر</a>
+            <a href="?page={{ page_obj.next_page_number }}" title="صفحه بعدی">بعدی</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}" title="صفحه آخر">آخر</a>
             {% endif %}
         </div>
         {% endif %}

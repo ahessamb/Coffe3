@@ -5,7 +5,7 @@
 {% block content %}
 <div class="cart-page">
     <div class="container">
-        <h1 class="page-title">سبد خرید</h1>
+        <h1 class="page-title">سبد خرید شما</h1>
 
         {% if cart %}
         <div class="cart-layout">
@@ -13,86 +13,238 @@
             <div class="cart-items">
                 {% for product_id, item in cart.items %}
                 <div class="cart-item">
+                    <!-- Item Image -->
                     <div class="item-image">
                         {% if item.main_image %}
-                        <img src="{{ item.main_image }}" alt="{{ item.title }}">
+                        <img src="{{ item.main_image }}" alt="{{ item.title }}" loading="lazy" decoding="async">
+                        {% else %}
+                        <div style="width: 100%; height: 100%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="30" height="30" opacity="0.3" aria-hidden="true">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                        </div>
                         {% endif %}
                     </div>
 
+                    <!-- Item Details -->
                     <div class="item-details">
                         <h3>{{ item.title }}</h3>
                         <p class="item-price">{{ item.price|floatformat:0 }} تومان</p>
                     </div>
 
+                    <!-- Quantity Control -->
                     <div class="item-quantity">
                         <form action="{% url 'website:update_cart' product_id %}" method="post" class="quantity-form">
                             {% csrf_token %}
-                            <button type="submit" name="action" value="decrease" class="qty-btn">-</button>
-                            <input type="number" name="quantity" min="1" max="{{ item.max_quantity|default:99 }}" value="{{ item.quantity }}" class="qty-input">
-                            <button type="submit" name="action" value="set" class="qty-btn">✓</button>
-                            <button type="submit" name="action" value="increase" class="qty-btn">+</button>
+                            <button type="button" name="action" value="decrease" class="qty-btn" aria-label="کاهش تعداد" title="کاهش">−</button>
+                            <input type="number" name="quantity" min="1" max="{{ item.max_quantity|default:99 }}" value="{{ item.quantity }}" class="qty-input" aria-label="تعداد">
+                            <button type="button" name="action" value="increase" class="qty-btn" aria-label="افزایش تعداد" title="افزایش">+</button>
                         </form>
                     </div>
 
+                    <!-- Item Subtotal -->
                     <div class="item-total">
                         <p>{{ item.subtotal|floatformat:0 }} تومان</p>
                     </div>
 
-                    <form action="{% url 'website:remove_from_cart' product_id %}" method="post">
+                    <!-- Remove Button -->
+                    <form action="{% url 'website:remove_from_cart' product_id %}" method="post" class="remove-form">
                         {% csrf_token %}
-                        <button type="submit" class="btn-remove">×</button>
+                        <button type="submit" class="btn-remove" aria-label="حذف از سبد" title="حذف {{ item.title }}">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                            </svg>
+                        </button>
                     </form>
                 </div>
                 {% endfor %}
             </div>
 
-            <!-- Checkout Form -->
+            <!-- Checkout Section -->
             <div class="checkout-section">
+                <!-- Order Summary -->
                 <div class="order-summary">
-                    <h3>خلاصه سفارش</h3>
+                    <h3>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true" style="display: inline; margin-left: 8px;">
+                            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        خلاصه سفارش
+                    </h3>
+                    
+                    <div class="summary-line">
+                        <span>تعداد اقلام:</span>
+                        <span>{{ request.session.cart|length }}</span>
+                    </div>
+                    
                     <div class="summary-line">
                         <span>جمع کل:</span>
                         <span class="total-price">{{ total|floatformat:0 }} تومان</span>
                     </div>
                 </div>
 
-                <form method="post" class="checkout-form">
+                <!-- Checkout Form -->
+                <form method="post" class="checkout-form" aria-label="اطلاعات تحویل">
                     {% csrf_token %}
-                    <h3>اطلاعات تحویل</h3>
+                    
+                    <h3 class="checkout-form-header">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" width="20" height="20">
+                            <path d="M12 22s7-6.5 7-13a7 7 0 1 0-14 0c0 6.5 7 13 7 13z"/>
+                            <circle cx="12" cy="9" r="2.5"/>
+                        </svg>
+                        اطلاعات تحویل
+                    </h3>
 
-                    {% for field in form %}
+                    <!-- Customer Name -->
                     <div class="form-group">
-                        {{ field.label_tag }}
-                        {{ field }}
-                        {% if field.errors %}
-                        <span class="error">{{ field.errors.0 }}</span>
+                        <label for="{{ form.customer_name.id_for_label }}" class="form-label">
+                            {{ form.customer_name.label }}
+                            <span class="required" aria-label="الزامی">*</span>
+                        </label>
+                        {{ form.customer_name }}
+                        <p class="field-hint">نام و نام خانوادگی گیرنده را مطابق کارت شناسایی وارد کنید.</p>
+                        {% if form.customer_name.errors %}
+                            {% for error in form.customer_name.errors %}
+                            <span class="field-error">{{ error }}</span>
+                            {% endfor %}
                         {% endif %}
                     </div>
-                    {% endfor %}
 
-                    <button type="submit" class="btn btn-primary btn-large">ادامه و پرداخت</button>
+                    <!-- Phone Number -->
+                    <div class="form-group">
+                        <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                            {{ form.phone_number.label }}
+                            <span class="required" aria-label="الزامی">*</span>
+                        </label>
+                        {{ form.phone_number }}
+                        <p class="field-hint">شماره موبایل ۱۱ رقمی با پیش‌شماره ۰۹ — برای هماهنگی ارسال ضروری است.</p>
+                        {% if form.phone_number.errors %}
+                            {% for error in form.phone_number.errors %}
+                            <span class="field-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Second Phone Number (Optional) -->
+                    {% if form.phone_number_2 %}
+                    <div class="form-group">
+                        <label for="{{ form.phone_number_2.id_for_label }}" class="form-label">
+                            {{ form.phone_number_2.label }}
+                        </label>
+                        {{ form.phone_number_2 }}
+                        <p class="field-hint">در صورت عدم پاسخگویی شماره اول، شماره دوم را وارد کنید (اختیاری).</p>
+                        {% if form.phone_number_2.errors %}
+                            {% for error in form.phone_number_2.errors %}
+                            <span class="field-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Address -->
+                    <div class="form-group">
+                        <label for="{{ form.address.id_for_label }}" class="form-label">
+                            {{ form.address.label }}
+                            <span class="required" aria-label="الزامی">*</span>
+                        </label>
+                        {{ form.address }}
+                        <p class="field-hint">آدرس کامل با پلاک، واحد و کدپستی را بنویسید تا ارسال بدون تأخیر انجام شود.</p>
+                        {% if form.address.errors %}
+                            {% for error in form.address.errors %}
+                            <span class="field-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Additional Notes (Optional) -->
+                    {% if form.additional_notes %}
+                    <div class="form-group">
+                        <label for="{{ form.additional_notes.id_for_label }}" class="form-label">
+                            {{ form.additional_notes.label }}
+                        </label>
+                        {{ form.additional_notes }}
+                        <p class="field-hint">زمان ترجیحی تحویل، کد آیفون یا توضیحات ویژه (اختیاری).</p>
+                        {% if form.additional_notes.errors %}
+                            {% for error in form.additional_notes.errors %}
+                            <span class="field-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary btn-large">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        ادامه و پرداخت
+                    </button>
                 </form>
             </div>
         </div>
+        
         {% else %}
+        <!-- Empty Cart -->
         <div class="empty-cart">
+            <svg class="empty-cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <circle cx="9" cy="21" r="1"/>
+                <circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
             <p>سبد خرید شما خالی است</p>
-            <a href="{% url 'website:products' %}" class="btn btn-primary">مشاهده محصولات</a>
+            <a href="{% url 'website:products' %}" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                </svg>
+                مشاهده محصولات
+            </a>
         </div>
         {% endif %}
     </div>
 </div>
 
-<script>
-// Calculate subtotals dynamically
-document.addEventListener('DOMContentLoaded', function() {
-    const items = document.querySelectorAll('.cart-item');
-    items.forEach(item => {
-        const price = parseFloat(item.querySelector('.item-price').textContent.replace(/[^\d]/g, ''));
-        const quantity = parseFloat(item.querySelector('.qty-input').value);
-        const total = price * quantity;
-        item.querySelector('.item-total p').textContent = total.toLocaleString('fa-IR') + ' تومان';
-    });
-});
-</script>
+<style>
+/* Form fields styling for cart */
+#id_customer_name,
+#id_phone_number,
+#id_phone_number_2,
+#id_address,
+#id_additional_notes {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all var(--transition-base);
+}
+
+#id_customer_name::placeholder,
+#id_phone_number::placeholder,
+#id_phone_number_2::placeholder,
+#id_address::placeholder,
+#id_additional_notes::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+#id_customer_name:focus,
+#id_phone_number:focus,
+#id_phone_number_2:focus,
+#id_address:focus,
+#id_additional_notes:focus {
+    outline: none;
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+}
+
+#id_additional_notes {
+    resize: vertical;
+    min-height: 100px;
+}
+</style>
 {% endblock %}

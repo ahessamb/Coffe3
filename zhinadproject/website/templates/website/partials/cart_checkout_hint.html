@@ -1,0 +1,5 @@
+{% if request.session.cart %}
+<p class="cart-checkout-hint">
+    <a href="{% url 'website:cart' %}">برای نهایی کردن سبد خرید خود اینجا را کلیک کنید</a>
+</p>
+{% endif %}

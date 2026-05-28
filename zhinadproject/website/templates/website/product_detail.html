@@ -6,72 +6,128 @@
 <div class="product-detail">
     <div class="container">
         <div class="product-layout">
-            <!-- Images -->
+            <!-- Product Images -->
             <div class="product-images">
                 <div class="main-image">
                     {% if product.main_image %}
-                    <img src="{{ product.main_image.url }}" alt="{{ product.title }}" id="mainImage">
+                    <img src="{{ product.main_image.url }}" alt="{{ product.title }}" id="mainImage" loading="eager" decoding="async">
+                    {% else %}
+                    <div style="aspect-ratio: 1; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-muted);">تصویر دسترس‌پذیر نیست</div>
                     {% endif %}
                 </div>
-                
+
+                <!-- Image Gallery -->
                 {% if product.images.all %}
                 <div class="image-gallery">
-                    <img src="{{ product.main_image.url }}" alt="{{ product.title }}" 
-                         class="gallery-thumb active" onclick="changeImage(this)">
+                    <button type="button" class="gallery-thumb active" onclick="changeImage(this)" aria-label="تصویر اصلی" title="تصویر اصلی">
+                        {% if product.main_image %}
+                        <img src="{{ product.main_image.url }}" alt="{{ product.title }}" loading="lazy" decoding="async">
+                        {% endif %}
+                    </button>
+                    
                     {% for image in product.images.all %}
-                    <img src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.title }}" 
-                         class="gallery-thumb" onclick="changeImage(this)">
+                    <button type="button" class="gallery-thumb" onclick="changeImage(this)" aria-label="تصویر {{ forloop.counter }}" title="نمایش تصویر {{ forloop.counter }}">
+                        <img src="{{ image.image.url }}" alt="{{ image.alt_text|default:product.title }}" loading="lazy" decoding="async">
+                    </button>
                     {% endfor %}
                 </div>
                 {% endif %}
             </div>
-            
-            <!-- Product Info -->
+
+            <!-- Product Details -->
             <div class="product-details">
                 <h1 class="product-title">{{ product.title }}</h1>
-                
+
                 {% if product.subtitle %}
                 <p class="product-subtitle">{{ product.subtitle }}</p>
                 {% endif %}
 
+                <!-- Product Metadata -->
                 <div class="product-meta">
-                    <p><strong>دسته‌بندی:</strong> {{ product.category.title }}</p>
+                    <p>
+                        <strong>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                                <rect x="3" y="3" width="7" height="7"/>
+                                <rect x="14" y="3" width="7" height="7"/>
+                                <rect x="14" y="14" width="7" height="7"/>
+                                <rect x="3" y="14" width="7" height="7"/>
+                            </svg>
+                            دسته‌بندی:
+                        </strong>
+                        {{ product.category.title }}
+                    </p>
+                    
                     {% with product.tags.all as tag_list %}
                         {% if tag_list %}
-                        <p><strong>برچسب‌ها:</strong>
-                            {% for t in tag_list %}
-                                {{ t.title }}{% if not forloop.last %}، {% endif %}
-                            {% endfor %}
+                        <p>
+                            <strong>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                                    <circle cx="8" cy="8" r="1.5"/>
+                                </svg>
+                                برچسب‌ها:
+                            </strong>
+                            {% for t in tag_list %}{{ t.title }}{% if not forloop.last %}، {% endif %}{% endfor %}
                         </p>
                         {% endif %}
                     {% endwith %}
                 </div>
-                
+
+                <!-- Price & Stock Section -->
                 <div class="product-price-section">
                     {% if product.price != None %}
                     <span class="price">{{ product.price|floatformat:0 }} تومان</span>
                     {% else %}
                     <span class="price no-price">برای اطلاع از آخرین قیمت تماس بگیرید</span>
                     {% endif %}
+                    
                     {% if product.stock > 0 %}
-                    <span class="stock-status in-stock">موجود</span>
+                    <span class="stock-status in-stock">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                        </svg>
+                        موجود
+                    </span>
                     {% else %}
-                    <span class="stock-status out-of-stock">ناموجود</span>
+                    <span class="stock-status out-of-stock badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                        </svg>
+                        ناموجود
+                    </span>
                     {% endif %}
                 </div>
-                
+
+                <!-- Product Description -->
                 <div class="product-description">
                     <h3>توضیحات محصول</h3>
                     <p>{{ product.description|linebreaks }}</p>
                 </div>
-                
+
+                <!-- Add to Cart Form -->
                 {% if product.is_buyable %}
                 <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form">
                     {% csrf_token %}
+                    <p class="field-hint">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 16v-4M12 8h.01"/>
+                        </svg>
+                        حداکثر <strong>{{ product.stock }}</strong> عدد در انبار موجود است.
+                    </p>
+                    
                     <div class="add-qty">
-                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input">
-                        <button type="submit" class="btn btn-primary btn-large">افزودن به سبد خرید</button>
+                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input" aria-label="تعداد محصول" required>
+                        <button type="submit" class="btn btn-primary btn-large">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                                <circle cx="9" cy="21" r="1"/>
+                                <circle cx="20" cy="21" r="1"/>
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                            </svg>
+                            افزودن به سبد خرید
+                        </button>
                     </div>
+                    {% include 'website/partials/cart_checkout_hint.html' %}
                 </form>
                 {% endif %}
             </div>
@@ -79,10 +135,19 @@
     </div>
 </div>
 
+<!-- Image Change Script -->
 <script>
 function changeImage(element) {
-    document.getElementById('mainImage').src = element.src;
-    document.querySelectorAll('.gallery-thumb').forEach(thumb => {
+    const main = document.getElementById('mainImage');
+    if (!main) return;
+    
+    const img = element.querySelector('img');
+    if (img) {
+        main.src = img.src;
+        main.alt = img.alt;
+    }
+    
+    document.querySelectorAll('.gallery-thumb').forEach(function(thumb) {
         thumb.classList.remove('active');
     });
     element.classList.add('active');

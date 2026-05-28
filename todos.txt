@@ -1,19 +1,10 @@
--categories (dynamic)
--sort of products
--select multiple items
--basket icon
 
--add multiple recipients
--order status (do i realy need it? i dont think so)
-
--telegram details and notifications in other states (do i realy need it? i dont think so)
--simpler transaction code
-
+order status (do i realy need it? i dont think so)
+telegram details and notifications in other states (do i realy need it? i dont think so)
 login - customer details?
 
-overall css / format
--blog
+frontend
 images / headers / tails
 details of products
--tamas ba ma
--darbare ma
+
+

@@ -3,22 +3,28 @@
 {% block title %}{{ page.title }} - ژیناد{% endblock %}
 
 {% block content %}
+<!-- Page Header -->
 <div class="page-header">
     <div class="container">
         <h1>{{ page.title }}</h1>
     </div>
 </div>
 
-<section class="content-page">
+<!-- Content Page -->
+<section class="content-page" style="padding: var(--space-11) var(--container-px);">
     <div class="container">
         <div class="content-prose">
             {% for block in blocks %}
                 {% include 'website/partials/content_block.html' with block=block %}
             {% empty %}
-                <p class="no-products">محتوایی برای نمایش وجود ندارد.</p>
+                <div style="text-align: center; padding: var(--space-11) var(--space-4);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="60" height="60" opacity="0.3" aria-hidden="true" style="margin: 0 auto var(--space-4); display: block;">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5l-5 5v-5H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+                    </svg>
+                    <p class="no-products">محتوایی برای نمایش وجود ندارد.</p>
+                </div>
             {% endfor %}
         </div>
     </div>
 </section>
 {% endblock %}
-

@@ -2,38 +2,51 @@
 {% load static %}
 
 {% block content %}
+<!-- Hero Section -->
 <div class="hero{% if home_hero_images %} hero-with-album{% endif %}">
     {% if home_hero_images %}
     <div class="hero-album" aria-hidden="true">
         {% for img in home_hero_images %}
-        <img src="{{ img.image.url }}" alt="" class="hero-album-image{% if forloop.first %} is-active{% endif %}">
+        <img src="{{ img.image.url }}" alt="" class="hero-album-image{% if forloop.first %} is-active{% endif %}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
         {% endfor %}
     </div>
     {% endif %}
+    
     <div class="container">
         <div class="hero-content">
             <h1 class="hero-title">قهوه و شکلات دست‌ساز</h1>
-            <p class="hero-subtitle">تجربه‌ای متفاوت از طعم و کیفیت</p>
-            <a href="{% url 'website:products' %}" class="btn btn-primary">مشاهده محصولات</a>
+            <p class="hero-subtitle">تجربه‌ای متفاوت از طعم و کیفیت — با عشق برای شما آماده شده</p>
+            <a href="{% url 'website:products' %}" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                    <polyline points="12 1 23 12 12 23 1 12 12 1"/>
+                </svg>
+                مشاهده محصولات
+            </a>
         </div>
     </div>
 </div>
 
+<!-- Featured Products Section -->
 <section class="featured-products">
     <div class="container">
-        <h2 class="section-title">محصولات ویژه</h2>
+        <h2 class="section-title">محصولات ویژه ما</h2>
 
         <div class="products-grid">
             {% for product in featured_products %}
             <div class="product-card">
-                <a href="{% url 'website:product_detail' product.slug %}">
+                <a href="{% url 'website:product_detail' product.slug %}" class="product-link" aria-label="مشاهده {{ product.title }}">
                     <div class="product-image">
                         {% if product.main_image %}
-                        <img src="{{ product.main_image.url }}" alt="{{ product.title }}">
+                        <img src="{{ product.main_image.url }}" alt="{{ product.title }}" loading="lazy" decoding="async">
+                        {% else %}
+                        <div style="aspect-ratio: 1; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-muted);">بدون تصویر</div>
                         {% endif %}
                     </div>
                     <div class="product-info">
                         <h3 class="product-title">{{ product.title }}</h3>
+                        {% if product.subtitle %}
+                        <p class="product-subtitle">{{ product.subtitle }}</p>
+                        {% endif %}
                         {% if product.price != None %}
                         <p class="product-price">{{ product.price|floatformat:0 }} تومان</p>
                         {% else %}
@@ -41,30 +54,48 @@
                         {% endif %}
                     </div>
                 </a>
+                
                 {% if product.is_buyable %}
-                <form action="{% url 'website:add_to_cart' product.id %}" method="post">
+                <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form">
                     {% csrf_token %}
                     <div class="add-qty">
-                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input">
-                        <button type="submit" class="btn btn-secondary">افزودن به سبد</button>
+                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input" aria-label="تعداد">
+                        <button type="submit" class="btn btn-secondary" title="افزودن {{ product.title }} به سبد خرید">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+                                <circle cx="9" cy="21" r="1"/>
+                                <circle cx="20" cy="21" r="1"/>
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                            </svg>
+                            افزودن
+                        </button>
                     </div>
+                    {% include 'website/partials/cart_checkout_hint.html' %}
                 </form>
                 {% endif %}
             </div>
+            {% empty %}
+            <div class="no-products">هنوز محصول منتشر نشده است.</div>
             {% endfor %}
         </div>
     </div>
 </section>
 
+<!-- About Preview Section -->
 <section class="about-preview">
     <div class="container">
         <div class="about-content">
             <h2>داستان ژیناد</h2>
-            <p>ما با عشق و علاقه، بهترین قهوه و شکلات‌های دست‌ساز را برای شما آماده می‌کنیم. هر محصول ما داستانی دارد...</p>
-            <a href="{% url 'website:about' %}" class="btn btn-outline">بیشتر بخوانید</a>
+            <p>ما با عشق و علاقه، بهترین قهوه و شکلات‌های دست‌ساز را برای شما آماده می‌کنیم. هر محصول ما داستانی دارد که از انتخاب دانه تا بسته‌بندی نهایی شکل می‌گیرد. کیفیت ممتاز و مواد اولیه‌ی برگزیده شده تضمین می‌کند که در هر جرعه، طعم و لذتی بی‌نظیر پیدا کنید.</p>
+            <a href="{% url 'website:about' %}" class="btn btn-outline">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                بیشتر بخوانید
+            </a>
         </div>
     </div>
 </section>
+{% endblock %}
 
 {% if home_hero_images|length > 1 %}
 {% block extra_js %}
@@ -72,8 +103,9 @@
 document.addEventListener('DOMContentLoaded', function() {
   const images = Array.from(document.querySelectorAll('.hero-album-image'));
   if (images.length <= 1) return;
+  
   let idx = 0;
-  setInterval(() => {
+  setInterval(function() {
     images[idx].classList.remove('is-active');
     idx = (idx + 1) % images.length;
     images[idx].classList.add('is-active');
@@ -82,4 +114,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endblock %}
 {% endif %}
-{% endblock %}
