@@ -1,5 +1,8 @@
-Django~=6.0.2
-wagtail
+Django~=5.1.0
+wagtail~=6.4.0
 django-nested-admin
 django-tinymce
 bleach
+whitenoise
+PyMySQL
+Pillow

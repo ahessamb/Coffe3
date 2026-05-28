@@ -12,6 +12,7 @@ venv/
 env/
 
 *.log
+zhinadproject/logs/
 
 # Django
 db.sqlite3
