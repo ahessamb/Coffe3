@@ -4,7 +4,17 @@ telegram details and notifications in other states (do i realy need it? i dont t
 login - customer details?
 
 frontend
-images / headers / tails
+images / headers / tails (now has problem with showing to peoople)
+
+Tracking code : no code from bank, only recipet is acceptable
+so i need to add this to tele, bale
+admin password!
+Hazine va Nahve Ersal
+auto realtime update for adding to backet (in prepayment page)
+pop up for (add to backet) seems badly and disturbing.
+(برای ادامه خرید به سید مراجعه کنید) also has problems
+if no price, a message (call us for buying) must be shown!
+
 details of products
 
 
