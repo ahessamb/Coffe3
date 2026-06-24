@@ -66,3 +66,8 @@ def log_notification(message: str, level: str = "info", **details) -> None:
 
 def log_admin(message: str, level: str = "info", **details) -> None:
     _log("ADMIN", message, level, **details)
+
+
+def log_startup(log_file: str) -> None:
+    """Write a startup line so backend.log exists as soon as Django boots."""
+    logger.info("[SYSTEM] Backend logging initialized | log_file=%s", log_file)

@@ -247,7 +247,14 @@ TINYMCE_DEFAULT_CONFIG = {
 # --- Logging (helps debug cPanel 500 errors) ---
 
 LOG_DIR = BASE_DIR / "logs"
-LOG_DIR.mkdir(exist_ok=True)
+BACKEND_LOG_FILE = LOG_DIR / "backend.log"
+DJANGO_LOG_FILE = LOG_DIR / "django.log"
+
+try:
+    LOG_DIR.mkdir(exist_ok=True, mode=0o775)
+except OSError:
+    # Do not crash settings import; AppConfig.ready() will retry and log a warning.
+    pass
 
 LOGGING = {
     "version": 1,
@@ -261,12 +268,12 @@ LOGGING = {
     "handlers": {
         "file": {
             "class": "logging.FileHandler",
-            "filename": LOG_DIR / "django.log",
+            "filename": str(DJANGO_LOG_FILE),
             "formatter": "verbose",
         },
         "backend_file": {
             "class": "logging.FileHandler",
-            "filename": LOG_DIR / "backend.log",
+            "filename": str(BACKEND_LOG_FILE),
             "formatter": "verbose",
         },
     },
