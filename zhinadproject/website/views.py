@@ -8,6 +8,7 @@ from .models import Category, Tag, Product, Order, OrderItem, BlogPost, ContentP
 from .forms import OrderForm, OrderTrackingForm
 from .utils import schedule_order_notifications
 from .seo import article_json_ld, product_json_ld
+from .backend_log import log_cart, log_checkout, log_order
 
 
 # ========== STATIC PAGES ==========
@@ -256,15 +257,30 @@ def add_to_cart(request, product_id):
     """Add product to cart"""
     product = get_object_or_404(Product, id=product_id, is_active=True)
     ajax = is_ajax_request(request)
+    client_ip = request.META.get("REMOTE_ADDR", "")
 
     if product.price is None:
         message = "این محصول قیمت ندارد. برای اطلاع از آخرین قیمت تماس بگیرید."
+        log_cart(
+            "Add to cart rejected — product has no price",
+            level="warning",
+            product_id=product_id,
+            product_title=product.title,
+            ip=client_ip,
+        )
         if ajax:
             return JsonResponse({"success": False, "message": message}, status=400)
         messages.error(request, message)
         return redirect(request.META.get("HTTP_REFERER", "website:products"))
     if product.stock <= 0:
         message = "این محصول موجود نیست."
+        log_cart(
+            "Add to cart rejected — out of stock",
+            level="warning",
+            product_id=product_id,
+            product_title=product.title,
+            ip=client_ip,
+        )
         if ajax:
             return JsonResponse({"success": False, "message": message}, status=400)
         messages.error(request, message)
@@ -294,9 +310,18 @@ def add_to_cart(request, product_id):
 
     save_cart(request, cart)
     success_message = f'{product.title} به سبد خرید اضافه شد'
+    cleaned_cart, total, _ = build_cleaned_cart(cart)
+    log_cart(
+        "Product added to cart",
+        product_id=product_id,
+        product_title=product.title,
+        quantity=cleaned_cart.get(product_id_str, {}).get("quantity", requested_qty),
+        cart_items=len(cleaned_cart),
+        cart_total=f"{total:,.0f}",
+        ip=client_ip,
+    )
 
     if ajax:
-        cleaned_cart, total, _ = build_cleaned_cart(cart)
         payload = cart_json_payload(cleaned_cart, total)
         payload["message"] = success_message
         return JsonResponse(payload)
@@ -311,6 +336,7 @@ def update_cart(request, product_id):
     product_id_str = str(product_id)
     ajax = is_ajax_request(request)
     removed = False
+    client_ip = request.META.get("REMOTE_ADDR", "")
 
     if product_id_str in cart:
         product = get_object_or_404(Product, id=product_id, is_active=True)
@@ -319,6 +345,13 @@ def update_cart(request, product_id):
             save_cart(request, cart)
             removed = True
             message = "این محصول قابل خرید نیست و از سبد حذف شد."
+            log_cart(
+                "Product removed from cart — no longer available",
+                level="warning",
+                product_id=product_id,
+                product_title=product.title,
+                ip=client_ip,
+            )
             if ajax:
                 cleaned_cart, total, _ = build_cleaned_cart(cart)
                 payload = cart_json_payload(cleaned_cart, total, product_id=product_id, removed=True)
@@ -348,6 +381,27 @@ def update_cart(request, product_id):
             cart[product_id_str]["quantity"] = qty
 
         save_cart(request, cart)
+        cleaned_cart, total, _ = build_cleaned_cart(cart)
+        if removed:
+            log_cart(
+                "Product removed from cart",
+                product_id=product_id,
+                product_title=product.title,
+                action=request.POST.get("action", ""),
+                cart_items=len(cleaned_cart),
+                ip=client_ip,
+            )
+        else:
+            log_cart(
+                "Cart quantity updated",
+                product_id=product_id,
+                product_title=product.title,
+                action=request.POST.get("action", ""),
+                quantity=cleaned_cart.get(product_id_str, {}).get("quantity"),
+                cart_items=len(cleaned_cart),
+                cart_total=f"{total:,.0f}",
+                ip=client_ip,
+            )
 
     if ajax:
         cleaned_cart, total, _ = build_cleaned_cart(cart)
@@ -361,10 +415,19 @@ def remove_from_cart(request, product_id):
     """Remove product from cart"""
     cart = get_cart(request)
     product_id_str = str(product_id)
+    client_ip = request.META.get("REMOTE_ADDR", "")
 
     if product_id_str in cart:
+        item_title = cart[product_id_str].get("title", product_id_str)
         del cart[product_id_str]
         save_cart(request, cart)
+        log_cart(
+            "Product removed from cart",
+            product_id=product_id,
+            product_title=item_title,
+            cart_items=len(cart),
+            ip=client_ip,
+        )
         messages.success(request, 'محصول از سبد خرید حذف شد')
 
     return redirect('website:cart')
@@ -380,6 +443,13 @@ def cart_view(request):
     cleaned_cart, total, products_by_id = build_cleaned_cart(cart)
 
     if cleaned_cart != cart:
+        log_cart(
+            "Cart auto-corrected during checkout review",
+            level="warning",
+            original_items=len(cart),
+            corrected_items=len(cleaned_cart),
+            ip=request.META.get("REMOTE_ADDR", ""),
+        )
         save_cart(request, cleaned_cart)
         cart = cleaned_cart
 
@@ -396,6 +466,7 @@ def cart_view(request):
             order.save()
 
             # Create order items
+            item_summary = []
             for product_id, item in cart.items():
                 product = products_by_id.get(int(product_id)) or Product.objects.get(id=int(product_id))
                 OrderItem.objects.create(
@@ -404,6 +475,19 @@ def cart_view(request):
                     quantity=item['quantity'],
                     price=Decimal(str(item['price']))
                 )
+                item_summary.append(f"{product.title} x{item['quantity']}")
+
+            log_checkout(
+                "Order placed — awaiting payment",
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                customer=order.customer_name,
+                phone=order.phone_number,
+                total=f"{order.total_price:,.0f}",
+                items=len(cart),
+                products="; ".join(item_summary),
+                ip=request.META.get("REMOTE_ADDR", ""),
+            )
 
             schedule_order_notifications(order, action='pending_order')
 
@@ -412,6 +496,12 @@ def cart_view(request):
             request.session['order_id'] = order.id
 
             return redirect('website:order_confirmation')
+        log_checkout(
+            "Checkout failed — invalid form",
+            level="warning",
+            errors=form.errors.as_json(),
+            ip=request.META.get("REMOTE_ADDR", ""),
+        )
     else:
         form = OrderForm()
 
@@ -464,7 +554,20 @@ def order_tracking(request):
                     phone_number=phone,
                     tracking_code=tracking_code
                 )
+                log_order(
+                    "Order lookup succeeded",
+                    tracking_code=tracking_code,
+                    order_id=order.id,
+                    status=order.get_status_display(),
+                    ip=request.META.get("REMOTE_ADDR", ""),
+                )
             except Order.DoesNotExist:
+                log_order(
+                    "Order lookup failed — not found",
+                    level="warning",
+                    tracking_code=tracking_code,
+                    ip=request.META.get("REMOTE_ADDR", ""),
+                )
                 messages.error(request, 'سفارشی با این مشخصات یافت نشد.')
     else:
         form = OrderTrackingForm()

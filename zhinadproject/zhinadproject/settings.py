@@ -252,10 +252,22 @@ LOG_DIR.mkdir(exist_ok=True)
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s | %(levelname)-8s | %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
     "handlers": {
         "file": {
             "class": "logging.FileHandler",
             "filename": LOG_DIR / "django.log",
+            "formatter": "verbose",
+        },
+        "backend_file": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "backend.log",
+            "formatter": "verbose",
         },
     },
     "root": {
@@ -266,6 +278,11 @@ LOGGING = {
         "django": {
             "handlers": ["file"],
             "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "website.backend": {
+            "handlers": ["backend_file"],
+            "level": os.environ.get("BACKEND_LOG_LEVEL", "INFO"),
             "propagate": False,
         },
     },

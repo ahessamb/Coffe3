@@ -1,12 +1,33 @@
-import logging
 import threading
 
 import requests
 from django.db import close_old_connections
 
 from .models import SiteSettings, NotificationRecipient
+from .backend_log import log_exception, log_notification
 
-logger = logging.getLogger(__name__)
+
+def _api_error_detail(response):
+    """Extract a readable error message from a Telegram/Bale HTTP response."""
+    try:
+        body = response.json()
+        if isinstance(body, dict):
+            return body.get("description") or body.get("error") or str(body)[:300]
+        return str(body)[:300]
+    except Exception:
+        return f"HTTP {response.status_code}: {response.text[:300]}"
+
+
+def _notification_context(order, action, recipient=None):
+    ctx = {
+        "order_id": getattr(order, "id", None),
+        "tracking_code": getattr(order, "tracking_code", None),
+        "action": action,
+    }
+    if recipient is not None:
+        ctx["recipient"] = recipient.name
+        ctx["chat_id"] = recipient.chat_id
+    return ctx
 
 
 def send_telegram_notification(order, action='new_order'):
@@ -15,6 +36,13 @@ def send_telegram_notification(order, action='new_order'):
         settings = SiteSettings.objects.first()
 
         if not settings or not settings.telegram_bot_token:
+            log_notification(
+                "Telegram skipped — bot token not configured",
+                level="warning",
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action=action,
+            )
             return False
 
         # Get active Telegram recipients
@@ -24,14 +52,38 @@ def send_telegram_notification(order, action='new_order'):
         )
 
         if not recipients.exists():
+            log_notification(
+                "Telegram skipped — no active recipients",
+                level="warning",
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action=action,
+            )
             return False
 
         # Prepare message based on action
-        message = _prepare_message(order, action)
+        try:
+            message = _prepare_message(order, action)
+        except Exception as e:
+            log_exception(
+                "NOTIFICATION",
+                "Telegram message preparation failed",
+                exc=e,
+                **_notification_context(order, action),
+            )
+            return False
 
         # Send to all active Telegram recipients
         success_count = 0
         url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+
+        log_notification(
+            "Sending Telegram notifications",
+            order_id=order.id,
+            tracking_code=order.tracking_code,
+            action=action,
+            recipients=recipients.count(),
+        )
 
         for recipient in recipients:
             try:
@@ -45,9 +97,38 @@ def send_telegram_notification(order, action='new_order'):
 
                 if response.status_code == 200:
                     success_count += 1
+                    log_notification(
+                        "Telegram message sent",
+                        order_id=order.id,
+                        tracking_code=order.tracking_code,
+                        action=action,
+                        recipient=recipient.name,
+                        chat_id=recipient.chat_id,
+                    )
+                else:
+                    log_notification(
+                        "Telegram API returned error",
+                        level="error",
+                        **_notification_context(order, action, recipient),
+                        status_code=response.status_code,
+                        response=_api_error_detail(response),
+                    )
 
+            except requests.RequestException as e:
+                log_exception(
+                    "NOTIFICATION",
+                    "Telegram network/request error",
+                    exc=e,
+                    **_notification_context(order, action, recipient),
+                )
+                continue
             except Exception as e:
-                print(f"Telegram notification error for {recipient.name}: {e}")
+                log_exception(
+                    "NOTIFICATION",
+                    "Telegram send failed — unexpected error",
+                    exc=e,
+                    **_notification_context(order, action, recipient),
+                )
                 continue
 
         # Mark as notified if at least one succeeded
@@ -55,10 +136,24 @@ def send_telegram_notification(order, action='new_order'):
             order.telegram_notified = True
             order.save(update_fields=['telegram_notified'])
 
+        if success_count == 0:
+            log_notification(
+                "Telegram notifications failed for all recipients",
+                level="error",
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action=action,
+            )
+
         return success_count > 0
 
     except Exception as e:
-        print(f"Telegram notification error: {e}")
+        log_exception(
+            "NOTIFICATION",
+            "Telegram notification failed — unhandled error",
+            exc=e,
+            **_notification_context(order, action),
+        )
         return False
 
 
@@ -68,6 +163,13 @@ def send_bale_notification(order, action='new_order'):
         settings = SiteSettings.objects.first()
 
         if not settings or not settings.bale_bot_token:
+            log_notification(
+                "Bale skipped — bot token not configured",
+                level="warning",
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action=action,
+            )
             return False
 
         # Get active Bale recipients
@@ -77,14 +179,38 @@ def send_bale_notification(order, action='new_order'):
         )
 
         if not recipients.exists():
+            log_notification(
+                "Bale skipped — no active recipients",
+                level="warning",
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action=action,
+            )
             return False
 
         # Prepare message based on action
-        message = _prepare_message(order, action)
+        try:
+            message = _prepare_message(order, action)
+        except Exception as e:
+            log_exception(
+                "NOTIFICATION",
+                "Bale message preparation failed",
+                exc=e,
+                **_notification_context(order, action),
+            )
+            return False
 
         # Send to all active Bale recipients
         success_count = 0
         url = f"https://tapi.bale.ai/bot{settings.bale_bot_token}/sendMessage"
+
+        log_notification(
+            "Sending Bale notifications",
+            order_id=order.id,
+            tracking_code=order.tracking_code,
+            action=action,
+            recipients=recipients.count(),
+        )
 
         for recipient in recipients:
             try:
@@ -99,21 +225,58 @@ def send_bale_notification(order, action='new_order'):
 
                 if response.status_code == 200:
                     success_count += 1
+                    log_notification(
+                        "Bale message sent",
+                        order_id=order.id,
+                        tracking_code=order.tracking_code,
+                        action=action,
+                        recipient=recipient.name,
+                        chat_id=recipient.chat_id,
+                    )
                 else:
-                    try:
-                        data = response.json()
-                        print(f"Bale API error for {recipient.name}: {data}")
-                    except Exception:
-                        print(f"Bale API HTTP error for {recipient.name}: {response.status_code} {response.text[:200]}")
+                    log_notification(
+                        "Bale API returned error",
+                        level="error",
+                        **_notification_context(order, action, recipient),
+                        status_code=response.status_code,
+                        response=_api_error_detail(response),
+                    )
 
-            except Exception as e:
-                print(f"Bale notification error for {recipient.name}: {e}")
+            except requests.RequestException as e:
+                log_exception(
+                    "NOTIFICATION",
+                    "Bale network/request error",
+                    exc=e,
+                    **_notification_context(order, action, recipient),
+                )
                 continue
+            except Exception as e:
+                log_exception(
+                    "NOTIFICATION",
+                    "Bale send failed — unexpected error",
+                    exc=e,
+                    **_notification_context(order, action, recipient),
+                )
+                continue
+
+        if success_count == 0:
+            log_notification(
+                "Bale notifications failed for all recipients",
+                level="error",
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action=action,
+            )
 
         return success_count > 0
 
     except Exception as e:
-        print(f"Bale notification error: {e}")
+        log_exception(
+            "NOTIFICATION",
+            "Bale notification failed — unhandled error",
+            exc=e,
+            **_notification_context(order, action),
+        )
         return False
 
 
@@ -121,6 +284,15 @@ def send_all_notifications(order, action='new_order'):
     """Send notifications to both Telegram and Bale (synchronous)."""
     telegram_result = send_telegram_notification(order, action)
     bale_result = send_bale_notification(order, action)
+
+    log_notification(
+        "Notification batch completed",
+        order_id=order.id,
+        tracking_code=order.tracking_code,
+        action=action,
+        telegram=telegram_result,
+        bale=bale_result,
+    )
 
     return telegram_result or bale_result
 
@@ -133,8 +305,14 @@ def _run_notifications_in_background(order_id, action):
 
         order = Order.objects.prefetch_related('items__product').get(pk=order_id)
         send_all_notifications(order, action=action)
-    except Exception:
-        logger.exception("Background notification failed for order %s (%s)", order_id, action)
+    except Exception as e:
+        log_exception(
+            "NOTIFICATION",
+            "Background notification worker failed",
+            exc=e,
+            order_id=order_id,
+            action=action,
+        )
     finally:
         close_old_connections()
 
@@ -142,6 +320,12 @@ def _run_notifications_in_background(order_id, action):
 def schedule_order_notifications(order, action='new_order'):
     """Queue Telegram/Bale notifications without blocking the current request."""
     order_id = order.pk if hasattr(order, 'pk') else order
+    log_notification(
+        "Scheduling background notifications",
+        order_id=order_id,
+        tracking_code=getattr(order, "tracking_code", None),
+        action=action,
+    )
     thread = threading.Thread(
         target=_run_notifications_in_background,
         args=(order_id, action),

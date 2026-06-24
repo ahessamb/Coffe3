@@ -21,6 +21,7 @@ from .models import (
     NotificationRecipient,
 )
 from .utils import schedule_order_notifications
+from .backend_log import log_admin
 
 
 class ProductImageInline(admin.TabularInline):
@@ -158,6 +159,46 @@ class ProductAdmin(admin.ModelAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if change:
+            changed_fields = []
+            for field in form.changed_data:
+                if field == "tags":
+                    continue
+                changed_fields.append(f"{field}={form.cleaned_data.get(field)}")
+            log_admin(
+                "Product updated",
+                admin_user=request.user.username,
+                product_id=obj.id,
+                title=obj.title,
+                price=f"{obj.price:,}" if obj.price is not None else "—",
+                stock=obj.stock,
+                is_active=obj.is_active,
+                changed=", ".join(changed_fields) if changed_fields else "none",
+            )
+        else:
+            log_admin(
+                "Product created",
+                admin_user=request.user.username,
+                product_id=obj.id,
+                title=obj.title,
+                price=f"{obj.price:,}" if obj.price is not None else "—",
+                stock=obj.stock,
+                category=obj.category.title if obj.category else "—",
+                is_active=obj.is_active,
+            )
+
+    def delete_model(self, request, obj):
+        log_admin(
+            "Product deleted",
+            level="warning",
+            admin_user=request.user.username,
+            product_id=obj.id,
+            title=obj.title,
+        )
+        super().delete_model(request, obj)
+
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -286,6 +327,38 @@ class OrderAdmin(admin.ModelAdmin):
 
     get_items_display.short_description = 'محصولات سفارش'
 
+    def save_model(self, request, obj, form, change):
+        old_status = None
+        if change and obj.pk:
+            old_status = Order.objects.filter(pk=obj.pk).values_list("status", flat=True).first()
+
+        super().save_model(request, obj, form, change)
+
+        if not change:
+            log_admin(
+                "Order created manually in admin",
+                admin_user=request.user.username,
+                order_id=obj.id,
+                tracking_code=obj.tracking_code,
+                status=obj.get_status_display(),
+                total=f"{obj.total_price:,.0f}",
+            )
+            return
+
+        if old_status and old_status != obj.status:
+            log_admin(
+                "Order status changed",
+                admin_user=request.user.username,
+                order_id=obj.id,
+                tracking_code=obj.tracking_code,
+                customer=obj.customer_name,
+                old_status=old_status,
+                new_status=obj.status,
+                transaction_id=obj.transaction_id or "—",
+            )
+            if obj.status == "purchased" and old_status != "purchased":
+                schedule_order_notifications(obj, action="new_order")
+
     # Admin Actions
     def confirm_orders(self, request, queryset):
         """Confirm orders after checking transaction"""
@@ -296,18 +369,48 @@ class OrderAdmin(admin.ModelAdmin):
             order.save()
             count += 1
 
+            log_admin(
+                "Order confirmed",
+                admin_user=request.user.username,
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                customer=order.customer_name,
+                total=f"{order.total_price:,.0f}",
+                old_status="purchased",
+                new_status="confirmed",
+            )
+
             # Send notifications to both Telegram and Bale
             schedule_order_notifications(order, action='confirmed')
+
+        if count == 0:
+            log_admin(
+                "Order confirmation action — no eligible orders",
+                level="warning",
+                admin_user=request.user.username,
+                selected=queryset.count(),
+            )
 
         self.message_user(request, f'{count} سفارش تایید شد.')
 
     confirm_orders.short_description = 'تایید سفارش‌های انتخاب شده'
 
     def mark_as_processing(self, request, queryset):
-        count = queryset.update(status='processing')
-
-        # Send notifications
+        count = 0
         for order in queryset:
+            old_status = order.status
+            order.status = 'processing'
+            order.save(update_fields=['status'])
+            count += 1
+            log_admin(
+                "Order status updated",
+                admin_user=request.user.username,
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action="mark_as_processing",
+                old_status=old_status,
+                new_status="processing",
+            )
             schedule_order_notifications(order, action='processing')
 
         self.message_user(request, f'وضعیت {count} سفارش به "در حال آماده‌سازی" تغییر یافت.')
@@ -315,10 +418,21 @@ class OrderAdmin(admin.ModelAdmin):
     mark_as_processing.short_description = 'تغییر به "در حال آماده‌سازی"'
 
     def mark_as_shipped(self, request, queryset):
-        count = queryset.update(status='shipped')
-
-        # Send notifications
+        count = 0
         for order in queryset:
+            old_status = order.status
+            order.status = 'shipped'
+            order.save(update_fields=['status'])
+            count += 1
+            log_admin(
+                "Order status updated",
+                admin_user=request.user.username,
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action="mark_as_shipped",
+                old_status=old_status,
+                new_status="shipped",
+            )
             schedule_order_notifications(order, action='shipped')
 
         self.message_user(request, f'وضعیت {count} سفارش به "ارسال شده" تغییر یافت.')
@@ -326,10 +440,21 @@ class OrderAdmin(admin.ModelAdmin):
     mark_as_shipped.short_description = 'تغییر به "ارسال شده"'
 
     def mark_as_delivered(self, request, queryset):
-        count = queryset.update(status='delivered')
-
-        # Send notifications
+        count = 0
         for order in queryset:
+            old_status = order.status
+            order.status = 'delivered'
+            order.save(update_fields=['status'])
+            count += 1
+            log_admin(
+                "Order status updated",
+                admin_user=request.user.username,
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                action="mark_as_delivered",
+                old_status=old_status,
+                new_status="delivered",
+            )
             schedule_order_notifications(order, action='delivered')
 
         self.message_user(request, f'وضعیت {count} سفارش به "تحویل داده شده" تغییر یافت.')
@@ -337,10 +462,22 @@ class OrderAdmin(admin.ModelAdmin):
     mark_as_delivered.short_description = 'تغییر به "تحویل داده شده"'
 
     def mark_as_cancelled(self, request, queryset):
-        count = queryset.update(status='cancelled')
-
-        # Send notifications
+        count = 0
         for order in queryset:
+            old_status = order.status
+            order.status = 'cancelled'
+            order.save(update_fields=['status'])
+            count += 1
+            log_admin(
+                "Order cancelled",
+                admin_user=request.user.username,
+                order_id=order.id,
+                tracking_code=order.tracking_code,
+                customer=order.customer_name,
+                total=f"{order.total_price:,.0f}",
+                old_status=old_status,
+                new_status="cancelled",
+            )
             schedule_order_notifications(order, action='cancelled')
 
         self.message_user(request, f'وضعیت {count} سفارش به "لغو شده" تغییر یافت.')
