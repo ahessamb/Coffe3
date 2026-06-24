@@ -1,11 +1,22 @@
 import json
-import threading
+import os
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 import requests
 from django.db import close_old_connections
 
 from .models import SiteSettings, NotificationRecipient
 from .backend_log import log_exception, log_notification
+
+# When api.telegram.org is filtered, TCP connect can hang far longer than a single
+# read timeout. Use short connect timeouts and a hard wall-clock cap for Telegram.
+TELEGRAM_CONNECT_TIMEOUT = float(os.environ.get("TELEGRAM_CONNECT_TIMEOUT", "3"))
+TELEGRAM_READ_TIMEOUT = float(os.environ.get("TELEGRAM_READ_TIMEOUT", "5"))
+TELEGRAM_DEADLINE_SECONDS = float(os.environ.get("TELEGRAM_DEADLINE_SECONDS", "8"))
+BALE_CONNECT_TIMEOUT = float(os.environ.get("BALE_CONNECT_TIMEOUT", "5"))
+BALE_READ_TIMEOUT = float(os.environ.get("BALE_READ_TIMEOUT", "10"))
+REQUEST_TIMEOUT = (TELEGRAM_CONNECT_TIMEOUT, TELEGRAM_READ_TIMEOUT)
+BALE_REQUEST_TIMEOUT = (BALE_CONNECT_TIMEOUT, BALE_READ_TIMEOUT)
 
 
 def _mask_token(token: str) -> str:
@@ -17,14 +28,14 @@ def _mask_token(token: str) -> str:
     return f"SET({len(token)} chars, ends ...{token[-4:]})"
 
 
-def _notification_context(order, action, recipient=None, platform=None):
+def _notification_context(order, action, recipient=None, platform_name=None):
     ctx = {
         "order_id": getattr(order, "id", None),
         "tracking_code": getattr(order, "tracking_code", None),
         "action": action,
     }
-    if platform:
-        ctx["platform"] = platform
+    if platform_name:
+        ctx["platform"] = platform_name
     if recipient is not None:
         ctx["recipient"] = recipient.name
         ctx["recipient_id"] = recipient.id
@@ -32,8 +43,45 @@ def _notification_context(order, action, recipient=None, platform=None):
     return ctx
 
 
+def _telegram_disabled():
+    return os.environ.get("SKIP_TELEGRAM_NOTIFICATIONS", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def _run_with_deadline(func, *, deadline_seconds, label, order, action):
+    """Run a notification sender with a wall-clock cap so blocked APIs cannot stall Bale."""
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="notify-deadline") as pool:
+        future = pool.submit(func, order, action)
+        try:
+            return future.result(timeout=deadline_seconds)
+        except FuturesTimeoutError:
+            reason = (
+                f"{label}: skipped — blocked or unreachable "
+                f"(no response within {deadline_seconds:g}s)"
+            )
+            log_notification(
+                reason,
+                level="warning",
+                **_notification_context(order, action, platform_name=label.lower()),
+                deadline_seconds=deadline_seconds,
+            )
+            return False, reason
+        except Exception as exc:
+            reason = f"{label}: unhandled error in deadline wrapper: {exc}"
+            log_exception(
+                "NOTIFICATION",
+                reason,
+                exc=exc,
+                **_notification_context(order, action, platform_name=label.lower()),
+            )
+            return False, reason
+
+
 def _parse_response_body(response):
-    """Return parsed JSON body or a fallback dict with raw text."""
     try:
         body = response.json()
         if isinstance(body, dict):
@@ -44,7 +92,6 @@ def _parse_response_body(response):
 
 
 def _telegram_api_success(body, http_status):
-    """Telegram often returns HTTP 200 even when the API call failed."""
     if isinstance(body, dict) and "ok" in body:
         return bool(body.get("ok"))
     return http_status == 200
@@ -85,41 +132,24 @@ def _success_details(body, http_status):
     return details
 
 
-def _log_platform_config(platform, token, recipients):
+def _log_platform_config(platform_name, token, recipients):
     recipient_list = [
         f"{r.name}(id={r.id}, chat_id={r.chat_id})"
         for r in recipients
     ]
-    inactive_count = NotificationRecipient.objects.filter(
-        platform=platform,
-        is_active=False,
-    ).count()
-
     log_notification(
-        f"{platform} configuration check",
-        platform=platform,
+        f"{platform_name} config",
+        platform=platform_name,
         token=_mask_token(token),
         active_recipients=len(recipient_list),
-        inactive_recipients=inactive_count,
         recipients="; ".join(recipient_list) if recipient_list else "NONE",
-    )
-
-
-def _log_outgoing_request(platform, endpoint, chat_id, message, use_json):
-    log_notification(
-        f"{platform} sending HTTP request",
-        platform=platform,
-        endpoint=endpoint,
-        chat_id=chat_id,
-        message_length=len(message),
-        payload_format="json" if use_json else "form",
-        parse_mode="HTML",
     )
 
 
 def _send_to_recipient(
     *,
-    platform,
+    platform_label,
+    platform_name,
     order,
     action,
     recipient,
@@ -127,13 +157,16 @@ def _send_to_recipient(
     message,
     use_json,
     is_success,
+    request_timeout,
 ):
-    _log_outgoing_request(
-        platform,
-        endpoint=url.split("/bot", 1)[0] + "/bot***/sendMessage",
+    endpoint = url.split("/bot", 1)[0] + "/bot***/sendMessage"
+    log_notification(
+        f"{platform_label} HTTP request",
+        platform=platform_name,
+        endpoint=endpoint,
         chat_id=recipient.chat_id,
-        message=message,
-        use_json=use_json,
+        message_length=len(message),
+        payload_format="json" if use_json else "form",
     )
 
     payload = {
@@ -144,120 +177,137 @@ def _send_to_recipient(
 
     try:
         if use_json:
-            response = requests.post(url, json=payload, timeout=15)
+            response = requests.post(url, json=payload, timeout=request_timeout)
         else:
-            response = requests.post(url, data=payload, timeout=15)
+            response = requests.post(url, data=payload, timeout=request_timeout)
     except requests.Timeout as exc:
+        connect_s, read_s = request_timeout
+        reason = (
+            f"{platform_label} timeout for chat_id={recipient.chat_id} "
+            f"(connect={connect_s}s, read={read_s}s)"
+        )
         log_exception(
             "NOTIFICATION",
-            f"{platform} request timed out after 15s",
+            reason,
             exc=exc,
-            **_notification_context(order, action, recipient, platform),
-            endpoint=url.split("/bot", 1)[0] + "/bot***/sendMessage",
+            **_notification_context(order, action, recipient, platform_name),
         )
-        return False
+        return False, reason
     except requests.RequestException as exc:
+        reason = f"{platform_label} HTTP error for chat_id={recipient.chat_id}: {exc}"
         log_exception(
             "NOTIFICATION",
-            f"{platform} HTTP request failed",
+            reason,
             exc=exc,
-            **_notification_context(order, action, recipient, platform),
-            endpoint=url.split("/bot", 1)[0] + "/bot***/sendMessage",
+            **_notification_context(order, action, recipient, platform_name),
         )
-        return False
+        return False, reason
     except Exception as exc:
+        reason = f"{platform_label} unexpected error for chat_id={recipient.chat_id}: {exc}"
         log_exception(
             "NOTIFICATION",
-            f"{platform} unexpected error during HTTP request",
+            reason,
             exc=exc,
-            **_notification_context(order, action, recipient, platform),
+            **_notification_context(order, action, recipient, platform_name),
         )
-        return False
+        return False, reason
 
     body = _parse_response_body(response)
-    success = is_success(body, response.status_code)
-
-    if success:
+    if is_success(body, response.status_code):
         log_notification(
-            f"{platform} message delivered successfully",
-            **_notification_context(order, action, recipient, platform),
+            f"{platform_label} delivered OK",
+            **_notification_context(order, action, recipient, platform_name),
             **_success_details(body, response.status_code),
         )
-        return True
+        return True, "ok"
 
-    log_notification(
-        f"{platform} API rejected the message — ROOT CAUSE",
-        level="error",
-        **_notification_context(order, action, recipient, platform),
-        **_failure_details(body, response.status_code),
+    details = _failure_details(body, response.status_code)
+    reason = (
+        f"{platform_label} API error chat_id={recipient.chat_id}: "
+        f"HTTP {details.get('http_status')} | "
+        f"code={details.get('error_code')} | "
+        f"desc={details.get('description')}"
     )
-    return False
+    log_notification(
+        f"{platform_label} ROOT CAUSE",
+        level="error",
+        reason=reason,
+        **_notification_context(order, action, recipient, platform_name),
+        **details,
+    )
+    return False, reason
 
 
 def send_telegram_notification(order, action="new_order"):
-    """Send order notification to Telegram recipients."""
-    platform = "Telegram"
+    """Send order notification to Telegram recipients. Returns (success, reason)."""
+    platform_label = "Telegram"
+    platform_name = "telegram"
+
+    if _telegram_disabled():
+        reason = "Telegram: skipped — SKIP_TELEGRAM_NOTIFICATIONS is enabled on server"
+        log_notification(
+            reason,
+            level="warning",
+            **_notification_context(order, action, platform_name=platform_name),
+        )
+        return False, reason
+
+    log_notification(
+        f"{platform_label} step 1: start",
+        **_notification_context(order, action, platform_name=platform_name),
+    )
+
     try:
         settings = SiteSettings.objects.first()
+        log_notification(
+            f"{platform_label} step 2: loaded SiteSettings",
+            settings_found=bool(settings),
+            **_notification_context(order, action, platform_name=platform_name),
+        )
 
         if not settings:
-            log_notification(
-                "Telegram skipped — SiteSettings row missing in database",
-                level="error",
-                **_notification_context(order, action, platform="telegram"),
-            )
-            return False
+            reason = "Telegram: SiteSettings row missing in database"
+            log_notification(reason, level="error", **_notification_context(order, action, platform_name=platform_name))
+            return False, reason
 
         token = (settings.telegram_bot_token or "").strip()
         recipients = list(
             NotificationRecipient.objects.filter(platform="telegram", is_active=True)
         )
-
-        _log_platform_config("telegram", token, recipients)
+        _log_platform_config(platform_name, token, recipients)
 
         if not token:
-            log_notification(
-                "Telegram skipped — bot token is empty in SiteSettings",
-                level="error",
-                **_notification_context(order, action, platform="telegram"),
-                fix="Admin → Site Settings → Telegram bot token",
-            )
-            return False
+            reason = "Telegram: bot token is empty (Admin -> Site Settings -> Telegram bot token)"
+            log_notification(reason, level="error", **_notification_context(order, action, platform_name=platform_name))
+            return False, reason
 
         if not recipients:
-            log_notification(
-                "Telegram skipped — no active recipients configured",
-                level="error",
-                **_notification_context(order, action, platform="telegram"),
-                fix="Admin → Notification Recipients → add telegram recipient with chat_id",
-            )
-            return False
+            reason = "Telegram: no active recipients (Admin -> Notification Recipients -> add telegram chat_id)"
+            log_notification(reason, level="error", **_notification_context(order, action, platform_name=platform_name))
+            return False, reason
 
         try:
             message = _prepare_message(order, action)
         except Exception as exc:
-            log_exception(
-                "NOTIFICATION",
-                "Telegram message preparation failed",
-                exc=exc,
-                **_notification_context(order, action, platform="telegram"),
-            )
-            return False
+            reason = f"Telegram: message preparation failed: {exc}"
+            log_exception("NOTIFICATION", reason, exc=exc, **_notification_context(order, action, platform_name=platform_name))
+            return False, reason
 
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         success_count = 0
-        failure_count = 0
+        failure_reasons = []
 
         log_notification(
-            "Telegram dispatch started",
-            **_notification_context(order, action, platform="telegram"),
+            f"{platform_label} step 3: dispatching",
             recipients=len(recipients),
             message_length=len(message),
+            **_notification_context(order, action, platform_name=platform_name),
         )
 
         for recipient in recipients:
-            if _send_to_recipient(
-                platform=platform,
+            ok, recipient_reason = _send_to_recipient(
+                platform_label=platform_label,
+                platform_name=platform_name,
                 order=order,
                 action=action,
                 recipient=recipient,
@@ -265,99 +315,101 @@ def send_telegram_notification(order, action="new_order"):
                 message=message,
                 use_json=True,
                 is_success=_telegram_api_success,
-            ):
+                request_timeout=REQUEST_TIMEOUT,
+            )
+            if ok:
                 success_count += 1
             else:
-                failure_count += 1
+                failure_reasons.append(recipient_reason)
+                # When Telegram is filtered, fail fast — do not block Bale.
+                if "timeout" in recipient_reason.lower() or "HTTP error" in recipient_reason:
+                    log_notification(
+                        "Telegram: stopping early after unreachable/blocked response",
+                        level="warning",
+                        reason=recipient_reason,
+                        **_notification_context(order, action, platform_name=platform_name),
+                    )
+                    break
 
         if success_count > 0 and not order.telegram_notified:
             order.telegram_notified = True
             order.save(update_fields=["telegram_notified"])
 
-        log_notification(
-            "Telegram dispatch finished",
-            level="error" if success_count == 0 else "info",
-            **_notification_context(order, action, platform="telegram"),
-            sent=success_count,
-            failed=failure_count,
-            total=len(recipients),
-        )
-        return success_count > 0
+        if success_count > 0:
+            reason = f"Telegram: sent to {success_count}/{len(recipients)} recipient(s)"
+            log_notification(reason, **_notification_context(order, action, platform_name=platform_name))
+            return True, reason
+
+        reason = "Telegram: all failed — " + (" | ".join(failure_reasons) if failure_reasons else "unknown")
+        log_notification(reason, level="error", **_notification_context(order, action, platform_name=platform_name))
+        return False, reason
 
     except Exception as exc:
-        log_exception(
-            "NOTIFICATION",
-            "Telegram notification failed — unhandled error",
-            exc=exc,
-            **_notification_context(order, action, platform="telegram"),
-        )
-        return False
+        reason = f"Telegram: unhandled error: {exc}"
+        log_exception("NOTIFICATION", reason, exc=exc, **_notification_context(order, action, platform_name=platform_name))
+        return False, reason
 
 
 def send_bale_notification(order, action="new_order"):
-    """Send order notification to Bale recipients."""
-    platform = "Bale"
+    """Send order notification to Bale recipients. Returns (success, reason)."""
+    platform_label = "Bale"
+    platform_name = "bale"
+    log_notification(
+        f"{platform_label} step 1: start",
+        **_notification_context(order, action, platform_name=platform_name),
+    )
+
     try:
         settings = SiteSettings.objects.first()
+        log_notification(
+            f"{platform_label} step 2: loaded SiteSettings",
+            settings_found=bool(settings),
+            **_notification_context(order, action, platform_name=platform_name),
+        )
 
         if not settings:
-            log_notification(
-                "Bale skipped — SiteSettings row missing in database",
-                level="error",
-                **_notification_context(order, action, platform="bale"),
-            )
-            return False
+            reason = "Bale: SiteSettings row missing in database"
+            log_notification(reason, level="error", **_notification_context(order, action, platform_name=platform_name))
+            return False, reason
 
         token = (settings.bale_bot_token or "").strip()
         recipients = list(
             NotificationRecipient.objects.filter(platform="bale", is_active=True)
         )
-
-        _log_platform_config("bale", token, recipients)
+        _log_platform_config(platform_name, token, recipients)
 
         if not token:
-            log_notification(
-                "Bale skipped — bot token is empty in SiteSettings",
-                level="error",
-                **_notification_context(order, action, platform="bale"),
-                fix="Admin → Site Settings → Bale bot token",
-            )
-            return False
+            reason = "Bale: bot token is empty (Admin -> Site Settings -> Bale bot token)"
+            log_notification(reason, level="error", **_notification_context(order, action, platform_name=platform_name))
+            return False, reason
 
         if not recipients:
-            log_notification(
-                "Bale skipped — no active recipients configured",
-                level="error",
-                **_notification_context(order, action, platform="bale"),
-                fix="Admin → Notification Recipients → add bale recipient with chat_id",
-            )
-            return False
+            reason = "Bale: no active recipients (Admin -> Notification Recipients -> add bale chat_id)"
+            log_notification(reason, level="error", **_notification_context(order, action, platform_name=platform_name))
+            return False, reason
 
         try:
             message = _prepare_message(order, action)
         except Exception as exc:
-            log_exception(
-                "NOTIFICATION",
-                "Bale message preparation failed",
-                exc=exc,
-                **_notification_context(order, action, platform="bale"),
-            )
-            return False
+            reason = f"Bale: message preparation failed: {exc}"
+            log_exception("NOTIFICATION", reason, exc=exc, **_notification_context(order, action, platform_name=platform_name))
+            return False, reason
 
         url = f"https://tapi.bale.ai/bot{token}/sendMessage"
         success_count = 0
-        failure_count = 0
+        failure_reasons = []
 
         log_notification(
-            "Bale dispatch started",
-            **_notification_context(order, action, platform="bale"),
+            f"{platform_label} step 3: dispatching",
             recipients=len(recipients),
             message_length=len(message),
+            **_notification_context(order, action, platform_name=platform_name),
         )
 
         for recipient in recipients:
-            if _send_to_recipient(
-                platform=platform,
+            ok, recipient_reason = _send_to_recipient(
+                platform_label=platform_label,
+                platform_name=platform_name,
                 order=order,
                 action=action,
                 recipient=recipient,
@@ -365,29 +417,26 @@ def send_bale_notification(order, action="new_order"):
                 message=message,
                 use_json=False,
                 is_success=_bale_api_success,
-            ):
+                request_timeout=BALE_REQUEST_TIMEOUT,
+            )
+            if ok:
                 success_count += 1
             else:
-                failure_count += 1
+                failure_reasons.append(recipient_reason)
 
-        log_notification(
-            "Bale dispatch finished",
-            level="error" if success_count == 0 else "info",
-            **_notification_context(order, action, platform="bale"),
-            sent=success_count,
-            failed=failure_count,
-            total=len(recipients),
-        )
-        return success_count > 0
+        if success_count > 0:
+            reason = f"Bale: sent to {success_count}/{len(recipients)} recipient(s)"
+            log_notification(reason, **_notification_context(order, action, platform_name=platform_name))
+            return True, reason
+
+        reason = "Bale: all failed — " + (" | ".join(failure_reasons) if failure_reasons else "unknown")
+        log_notification(reason, level="error", **_notification_context(order, action, platform_name=platform_name))
+        return False, reason
 
     except Exception as exc:
-        log_exception(
-            "NOTIFICATION",
-            "Bale notification failed — unhandled error",
-            exc=exc,
-            **_notification_context(order, action, platform="bale"),
-        )
-        return False
+        reason = f"Bale: unhandled error: {exc}"
+        log_exception("NOTIFICATION", reason, exc=exc, **_notification_context(order, action, platform_name=platform_name))
+        return False, reason
 
 
 def send_all_notifications(order, action="new_order"):
@@ -399,91 +448,64 @@ def send_all_notifications(order, action="new_order"):
         action=action,
     )
 
-    telegram_result = send_telegram_notification(order, action)
-    bale_result = send_bale_notification(order, action)
+    telegram_ok, telegram_reason = _run_with_deadline(
+        send_telegram_notification,
+        deadline_seconds=TELEGRAM_DEADLINE_SECONDS,
+        label="Telegram",
+        order=order,
+        action=action,
+    )
 
     log_notification(
+        "Telegram phase done — starting Bale",
+        order_id=order.id,
+        tracking_code=order.tracking_code,
+        telegram_ok=telegram_ok,
+        telegram_reason=telegram_reason,
+    )
+
+    bale_ok, bale_reason = send_bale_notification(order, action)
+
+    overall_ok = telegram_ok or bale_ok
+    log_notification(
         "Notification batch completed",
-        level="error" if not (telegram_result or bale_result) else "info",
+        level="error" if not overall_ok else "info",
         order_id=order.id,
         tracking_code=order.tracking_code,
         action=action,
-        telegram_success=telegram_result,
-        bale_success=bale_result,
+        telegram_ok=telegram_ok,
+        telegram_reason=telegram_reason,
+        bale_ok=bale_ok,
+        bale_reason=bale_reason,
     )
 
-    return telegram_result or bale_result
-
-
-def _run_notifications_in_background(order_id, action):
-    """Worker executed in a background thread."""
-    from .models import Order
-
-    close_old_connections()
-    log_notification(
-        "Background notification worker started",
-        order_id=order_id,
-        action=action,
-        thread=threading.current_thread().name,
-    )
-    try:
-        order = Order.objects.prefetch_related("items__product").get(pk=order_id)
-        log_notification(
-            "Background worker loaded order",
-            order_id=order.id,
-            tracking_code=order.tracking_code,
-            action=action,
-            item_count=order.items.count(),
-        )
-        send_all_notifications(order, action=action)
-        log_notification(
-            "Background notification worker finished successfully",
-            order_id=order_id,
-            action=action,
-        )
-    except Order.DoesNotExist as exc:
-        log_exception(
-            "NOTIFICATION",
-            "Background worker failed — order not found in database",
-            exc=exc,
-            order_id=order_id,
-            action=action,
-        )
-    except Exception as exc:
-        log_exception(
-            "NOTIFICATION",
-            "Background notification worker failed",
-            exc=exc,
-            order_id=order_id,
-            action=action,
-        )
-    finally:
-        close_old_connections()
+    return overall_ok
 
 
 def schedule_order_notifications(order, action="new_order"):
-    """Queue Telegram/Bale notifications without blocking the current request."""
+    """Send Telegram/Bale notifications in the same request (reliable on cPanel/Passenger)."""
     order_id = order.pk if hasattr(order, "pk") else order
     log_notification(
-        "Scheduling background notifications",
+        "Sending notifications now (sync)",
         order_id=order_id,
         tracking_code=getattr(order, "tracking_code", None),
         action=action,
     )
-    thread = threading.Thread(
-        target=_run_notifications_in_background,
-        args=(order_id, action),
-        name=f"order-notify-{order_id}-{action}",
-        daemon=True,
-    )
-    thread.start()
-    log_notification(
-        "Background notification thread launched",
-        order_id=order_id,
-        action=action,
-        thread=thread.name,
-        daemon=True,
-    )
+
+    close_old_connections()
+    try:
+        send_all_notifications(order, action=action)
+    except Exception as exc:
+        log_exception(
+            "NOTIFICATION",
+            f"Notification dispatch crashed: {exc}",
+            exc=exc,
+            order_id=order_id,
+            tracking_code=getattr(order, "tracking_code", None),
+            action=action,
+        )
+    finally:
+        close_old_connections()
 
 
 def _prepare_message(order, action):

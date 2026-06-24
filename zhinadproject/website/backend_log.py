@@ -6,21 +6,41 @@ from typing import Optional
 logger = logging.getLogger("website.backend")
 
 
+def _flush_handlers() -> None:
+    for handler in logger.handlers:
+        handler.flush()
+
+
 def _format_details(**kwargs) -> str:
     parts = []
     for key, value in kwargs.items():
         if value is None or value == "":
             continue
-        if isinstance(value, str) and (" " in value or "," in value):
-            parts.append(f'{key}="{value}"')
+        text = str(value)
+        if " " in text or "," in text or "|" in text:
+            parts.append(f'{key}="{text}"')
         else:
-            parts.append(f"{key}={value}")
+            parts.append(f"{key}={text}")
     return f" | {' | '.join(parts)}" if parts else ""
 
 
-def _log(category: str, message: str, level: str = "info", **details) -> None:
+def _emit(level: str, category: str, message: str, **details) -> None:
     log_fn = getattr(logger, level, logger.info)
-    log_fn("[%s] %s%s", category, message, _format_details(**details))
+    try:
+        log_fn("[%s] %s%s", category, message, _format_details(**details))
+    except Exception as fallback_exc:
+        logger.error(
+            "[LOG_ERROR] Failed to write log line | category=%s | message=%s | error=%s",
+            category,
+            message,
+            fallback_exc,
+        )
+    finally:
+        _flush_handlers()
+
+
+def _log(category: str, message: str, level: str = "info", **details) -> None:
+    _emit(level, category, message, **details)
 
 
 def log_exception(
@@ -39,13 +59,18 @@ def log_exception(
     else:
         exc_info = True
 
-    logger.error(
-        "[%s] %s%s",
-        category,
-        message,
-        _format_details(**details),
-        exc_info=exc_info,
-    )
+    try:
+        logger.error(
+            "[%s] %s%s",
+            category,
+            message,
+            _format_details(**details),
+            exc_info=exc_info,
+        )
+    except Exception as fallback_exc:
+        logger.error("[LOG_ERROR] Failed to write exception log | error=%s", fallback_exc)
+    finally:
+        _flush_handlers()
 
 
 def log_cart(message: str, level: str = "info", **details) -> None:
@@ -71,3 +96,4 @@ def log_admin(message: str, level: str = "info", **details) -> None:
 def log_startup(log_file: str) -> None:
     """Write a startup line so backend.log exists as soon as Django boots."""
     logger.info("[SYSTEM] Backend logging initialized | log_file=%s", log_file)
+    _flush_handlers()
