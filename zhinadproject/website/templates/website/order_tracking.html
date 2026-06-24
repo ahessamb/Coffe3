@@ -1,6 +1,7 @@
 {% extends 'website/base.html' %}
 
 {% block title %}پیگیری سفارش - ژیناد{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
 <div class="tracking-page">
@@ -42,7 +43,7 @@
                         <span class="required" aria-label="الزامی">*</span>
                     </label>
                     {{ form.tracking_code }}
-                    <p class="field-hint">کد پیگیری را از پیامک تأیید یا صفحه پس از پرداخت کپی کنید. این کد یک سری اعداد و حروف است.</p>
+                    <p class="field-hint">کد پیگیری را از صفحه تأیید سفارش یا پیام فروشگاه کپی کنید.</p>
                     {% if form.tracking_code.errors %}
                         {% for error in form.tracking_code.errors %}
                         <span class="field-error">{{ error }}</span>
@@ -65,17 +66,17 @@
         <div class="order-status" style="max-width: 800px; margin: 0 auto;">
             <!-- Status Header -->
             <div class="status-header" style="background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-xl); padding: var(--space-7); margin-bottom: var(--space-7);">
-                <h2 style="margin-top: 0; display: flex; align-items: center; gap: var(--space-3);">
+                <h2 class="status-header-title">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" aria-hidden="true">
                         <circle cx="9" cy="21" r="1"/>
                         <circle cx="20" cy="21" r="1"/>
                         <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
                     </svg>
-                    سفارش #{{ order.id }}
+                    اطلاعات سفارش
                 </h2>
                 
-                <p class="tracking-code-display" style="margin: var(--space-4) 0; color: var(--text-secondary);">
-                    کد پیگیری: <strong style="color: var(--color-gold); font-family: 'Courier New', monospace; font-size: 1.1rem; letter-spacing: 1px;">{{ order.tracking_code }}</strong>
+                <p class="tracking-code-display">
+                    کد پیگیری: <strong>{{ order.tracking_code }}</strong>
                 </p>
                 
                 <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
@@ -94,120 +95,48 @@
             </div>
 
             <!-- Timeline -->
-            <div class="status-timeline" style="background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-xl); padding: var(--space-7); margin-bottom: var(--space-7);">
-                <h3 style="margin-top: 0; margin-bottom: var(--space-6); display: flex; align-items: center; gap: var(--space-2);">
+            <div class="status-timeline">
+                <h3 class="status-timeline-title">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                     </svg>
-                    سیر تحویل سفارش
+                    مراحل وضعیت سفارش
                 </h3>
 
-                <!-- Timeline Step 1: Order Created -->
-                <div class="timeline-step {% if order.created_at %}completed{% endif %}" style="display: flex; gap: var(--space-4); padding: var(--space-4) 0; position: relative;">
-                    {% if not forloop.last %}
-                    <div style="position: absolute; right: 17px; top: 52px; width: 2px; height: 60px; background: {% if order.created_at %}var(--color-success){% else %}var(--border-light){% endif %};"></div>
-                    {% endif %}
-                    
-                    <div class="timeline-dot" style="width: 36px; height: 36px; border-radius: 50%; background: {% if order.created_at %}var(--color-success){% else %}var(--border-light){% endif %}; color: {% if order.created_at %}var(--bg-primary){% else %}var(--text-muted){% endif %}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: none;">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
+                {% for step in order.get_tracking_timeline %}
+                <div class="timeline-step {{ step.state }}">
+                    <div class="timeline-dot" aria-hidden="true">
+                        {% if step.state == 'completed' %}
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
                             <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
                         </svg>
+                        {% elif step.state == 'cancelled' %}
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                        </svg>
+                        {% elif step.state == 'current' %}
+                        <span class="timeline-dot-pulse"></span>
+                        {% else %}
+                        <span class="timeline-dot-number">{{ forloop.counter }}</span>
+                        {% endif %}
                     </div>
-                    
-                    <div class="timeline-content">
-                        <div class="timeline-title">ثبت سفارش</div>
-                        <div class="timeline-date">{{ order.created_at|date:"j F Y — H:i" }}</div>
-                    </div>
-                </div>
 
-                <!-- Timeline Step 2: Payment -->
-                {% if order.purchased_at %}
-                <div class="timeline-step completed" style="display: flex; gap: var(--space-4); padding: var(--space-4) 0; position: relative;">
-                    <div style="position: absolute; right: 17px; top: 52px; width: 2px; height: 60px; background: var(--color-success);"></div>
-                    
-                    <div class="timeline-dot" style="width: 36px; height: 36px; border-radius: 50%; background: var(--color-success); color: var(--bg-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: none;">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
-                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-                        </svg>
-                    </div>
-                    
                     <div class="timeline-content">
-                        <div class="timeline-title">پرداخت انجام شد</div>
-                        <div class="timeline-date">{{ order.purchased_at|date:"j F Y — H:i" }}</div>
+                        <div class="timeline-title">{{ step.label }}</div>
+                        <div class="timeline-date">
+                            {% if step.state == 'completed' and step.timestamp %}
+                                {{ step.timestamp|date:"j F Y — H:i" }}
+                            {% elif step.state == 'completed' %}
+                                {{ step.description }}
+                            {% elif step.state == 'current' or step.state == 'cancelled' %}
+                                {{ step.description }}
+                            {% else %}
+                                در انتظار
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-                {% endif %}
-
-                <!-- Timeline Step 3: Confirmed -->
-                {% if order.confirmed_at %}
-                <div class="timeline-step completed" style="display: flex; gap: var(--space-4); padding: var(--space-4) 0; position: relative;">
-                    <div style="position: absolute; right: 17px; top: 52px; width: 2px; height: 60px; background: var(--color-success);"></div>
-                    
-                    <div class="timeline-dot" style="width: 36px; height: 36px; border-radius: 50%; background: var(--color-success); color: var(--bg-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: none;">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
-                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-                        </svg>
-                    </div>
-                    
-                    <div class="timeline-content">
-                        <div class="timeline-title">تایید شده</div>
-                        <div class="timeline-date">{{ order.confirmed_at|date:"j F Y — H:i" }}</div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Timeline Step 4: Processing -->
-                {% if order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}
-                <div class="timeline-step completed" style="display: flex; gap: var(--space-4); padding: var(--space-4) 0; position: relative;">
-                    <div style="position: absolute; right: 17px; top: 52px; width: 2px; height: 60px; background: var(--color-success);"></div>
-                    
-                    <div class="timeline-dot" style="width: 36px; height: 36px; border-radius: 50%; background: var(--color-success); color: var(--bg-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: none;">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
-                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-                        </svg>
-                    </div>
-                    
-                    <div class="timeline-content">
-                        <div class="timeline-title">در حال آماده‌سازی</div>
-                        <div class="timeline-date">سفارش شما در انبار در حال آماده‌سازی است</div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Timeline Step 5: Shipped -->
-                {% if order.status == 'shipped' or order.status == 'delivered' %}
-                <div class="timeline-step completed" style="display: flex; gap: var(--space-4); padding: var(--space-4) 0; position: relative;">
-                    <div style="position: absolute; right: 17px; top: 52px; width: 2px; height: 60px; background: var(--color-success);"></div>
-                    
-                    <div class="timeline-dot" style="width: 36px; height: 36px; border-radius: 50%; background: var(--color-success); color: var(--bg-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: none;">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
-                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-                        </svg>
-                    </div>
-                    
-                    <div class="timeline-content">
-                        <div class="timeline-title">ارسال شده</div>
-                        <div class="timeline-date">سفارش شما از انبار ارسال شده است</div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Timeline Step 6: Delivered -->
-                {% if order.status == 'delivered' %}
-                <div class="timeline-step completed" style="display: flex; gap: var(--space-4); padding: var(--space-4) 0; position: relative;">
-                    <div class="timeline-dot" style="width: 36px; height: 36px; border-radius: 50%; background: var(--color-success); color: var(--bg-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: none;">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
-                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
-                        </svg>
-                    </div>
-                    
-                    <div class="timeline-content">
-                        <div class="timeline-title">تحویل داده شده</div>
-                        <div class="timeline-date">سفارش شما تحویل داده شد</div>
-                    </div>
-                </div>
-                {% endif %}
+                {% endfor %}
             </div>
 
             <!-- Order Details Table -->

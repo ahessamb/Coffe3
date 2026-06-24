@@ -1,6 +1,19 @@
 {% extends 'website/base.html' %}
+{% load seo_tags %}
 
 {% block title %}{{ product.title }} - ژیناد{% endblock %}
+{% block og_title %}{{ product.title }} - ژیناد{% endblock %}
+{% block twitter_title %}{{ product.title }} - ژیناد{% endblock %}
+{% block meta_description %}{{ product.description|meta_truncate:155 }}{% endblock %}
+{% block og_description %}{{ product.description|meta_truncate:155 }}{% endblock %}
+{% block twitter_description %}{{ product.description|meta_truncate:155 }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_image %}{% if product.main_image %}{{ product.main_image|absolute_media }}{% else %}{{ default_og_image }}{% endif %}{% endblock %}
+{% block twitter_image %}{% if product.main_image %}{{ product.main_image|absolute_media }}{% else %}{{ default_og_image }}{% endif %}{% endblock %}
+
+{% block structured_data %}
+{% json_ld product_json_ld %}
+{% endblock %}
 
 {% block content %}
 <div class="product-detail">
@@ -78,7 +91,7 @@
                     {% if product.price != None %}
                     <span class="price">{{ product.price|floatformat:0 }} تومان</span>
                     {% else %}
-                    <span class="price no-price">برای اطلاع از آخرین قیمت تماس بگیرید</span>
+                    <span class="price no-price">{% include 'website/partials/no_price_message.html' %}</span>
                     {% endif %}
                     
                     {% if product.stock > 0 %}
@@ -106,7 +119,7 @@
 
                 <!-- Add to Cart Form -->
                 {% if product.is_buyable %}
-                <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form">
+                <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form" data-add-to-cart>
                     {% csrf_token %}
                     <p class="field-hint">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 4px; vertical-align: text-bottom;">
@@ -117,7 +130,7 @@
                     </p>
                     
                     <div class="add-qty">
-                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input" aria-label="تعداد محصول" required>
+                        {% include 'website/partials/product_qty_selector.html' with max_stock=product.stock %}
                         <button type="submit" class="btn btn-primary btn-large">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
                                 <circle cx="9" cy="21" r="1"/>
@@ -127,8 +140,9 @@
                             افزودن به سبد خرید
                         </button>
                     </div>
-                    {% include 'website/partials/cart_checkout_hint.html' %}
                 </form>
+                {% elif product.price == None %}
+                <p class="no-price-detail">{% include 'website/partials/no_price_message.html' %}</p>
                 {% endif %}
             </div>
         </div>

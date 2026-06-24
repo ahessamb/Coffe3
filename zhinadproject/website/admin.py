@@ -20,7 +20,7 @@ from .models import (
     ContentBlock,
     NotificationRecipient,
 )
-from .utils import send_all_notifications
+from .utils import schedule_order_notifications
 
 
 class ProductImageInline(admin.TabularInline):
@@ -297,7 +297,7 @@ class OrderAdmin(admin.ModelAdmin):
             count += 1
 
             # Send notifications to both Telegram and Bale
-            send_all_notifications(order, action='confirmed')
+            schedule_order_notifications(order, action='confirmed')
 
         self.message_user(request, f'{count} سفارش تایید شد.')
 
@@ -308,7 +308,7 @@ class OrderAdmin(admin.ModelAdmin):
 
         # Send notifications
         for order in queryset:
-            send_all_notifications(order, action='processing')
+            schedule_order_notifications(order, action='processing')
 
         self.message_user(request, f'وضعیت {count} سفارش به "در حال آماده‌سازی" تغییر یافت.')
 
@@ -319,7 +319,7 @@ class OrderAdmin(admin.ModelAdmin):
 
         # Send notifications
         for order in queryset:
-            send_all_notifications(order, action='shipped')
+            schedule_order_notifications(order, action='shipped')
 
         self.message_user(request, f'وضعیت {count} سفارش به "ارسال شده" تغییر یافت.')
 
@@ -330,7 +330,7 @@ class OrderAdmin(admin.ModelAdmin):
 
         # Send notifications
         for order in queryset:
-            send_all_notifications(order, action='delivered')
+            schedule_order_notifications(order, action='delivered')
 
         self.message_user(request, f'وضعیت {count} سفارش به "تحویل داده شده" تغییر یافت.')
 
@@ -341,7 +341,7 @@ class OrderAdmin(admin.ModelAdmin):
 
         # Send notifications
         for order in queryset:
-            send_all_notifications(order, action='cancelled')
+            schedule_order_notifications(order, action='cancelled')
 
         self.message_user(request, f'وضعیت {count} سفارش به "لغو شده" تغییر یافت.')
 

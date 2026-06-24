@@ -76,6 +76,17 @@ WAGTAILADMIN_BASE_URL = os.environ.get(
     "https://zhinadcoffee.ir",
 )
 
+# --- SEO ---
+
+CANONICAL_SITE_URL = os.environ.get(
+    "CANONICAL_SITE_URL",
+    "https://zhinadcoffee.ir",
+)
+CANONICAL_REDIRECT_HOSTS = _env_list(
+    "CANONICAL_REDIRECT_HOSTS",
+    ["zhinad.ir", "www.zhinad.ir", "www.zhinadcoffee.ir"],
+)
+
 # --- Apps ---
 
 INSTALLED_APPS = [
@@ -85,6 +96,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sitemaps",
     "nested_admin",
     "tinymce",
     "website",
@@ -107,6 +119,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "website.middleware.CanonicalDomainRedirectMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

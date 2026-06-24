@@ -1,112 +1,64 @@
 {% extends 'website/base.html' %}
 
 {% block title %}تکمیل خرید - ژیناد{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
 <div class="confirmation-page">
     <div class="container">
         <div class="confirmation-box">
-            <!-- Order Header -->
-            <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-6); justify-content: center;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32" aria-hidden="true" style="color: var(--color-gold);">
-                    <circle cx="9" cy="21" r="1"/>
-                    <circle cx="20" cy="21" r="1"/>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            <!-- Header -->
+            <div class="confirmation-header">
+                <div class="confirmation-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="36" height="36">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </div>
+                <h1>سفارش شما ثبت شد</h1>
+                <p class="confirmation-lead">از اعتماد شما به ژیناد سپاسگزاریم. جزئیات سفارش در ادامه آمده است.</p>
+            </div>
+
+            <!-- Tracking Code -->
+            <div class="tracking-code-box">
+                <p class="tracking-label">کد پیگیری سفارش</p>
+                <p class="tracking-code-value">{{ order.tracking_code }}</p>
+                <p class="field-hint">این کد را یادداشت کنید — برای پیگیری سفارش به آن نیاز دارید.</p>
+            </div>
+
+            <!-- Store Contact Message -->
+            <div class="confirmation-notice">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22" aria-hidden="true">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
-                <h1>تکمیل خرید</h1>
-            </div>
-
-            <!-- Order Info -->
-            <div class="order-info" style="background: var(--bg-secondary); padding: var(--space-6); border-radius: var(--radius-lg); margin-bottom: var(--space-7); text-align: center;">
-                <p style="margin: 0 0 var(--space-3);">شماره سفارش</p>
-                <p class="order-number" style="font-size: 1.5rem; font-weight: 700; color: var(--color-gold); margin: 0; font-family: 'Courier New', monospace; letter-spacing: 2px;">#{{ order.id }}</p>
-                
-                <div style="border-top: 1px solid var(--border-light); margin: var(--space-6) 0; padding-top: var(--space-6);">
-                    <p style="margin: 0 0 var(--space-2); font-size: 0.9rem; color: var(--text-muted);">مبلغ قابل پرداخت</p>
-                    <p class="order-total" style="font-size: 2rem; font-weight: 700; margin: 0; background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{ order.total_price|floatformat:0 }} تومان</p>
-                </div>
-            </div>
-
-            <!-- Payment Instructions -->
-            {% if settings %}
-            <div class="payment-info" style="background: rgba(212, 165, 116, 0.08); border-left: 4px solid var(--color-gold); padding: var(--space-6); border-radius: var(--radius-lg); margin-bottom: var(--space-7);">
-                <h2 style="margin-top: 0; color: var(--color-gold); display: flex; align-items: center; gap: var(--space-2);">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
-                        <rect x="2" y="5" width="20" height="14" rx="2"/>
-                        <path d="M2 10h20"/>
-                    </svg>
-                    اطلاعات پرداخت
-                </h2>
-                <p style="margin-bottom: var(--space-6);">لطفاً مبلغ فوق را به شماره کارت زیر واریز کنید:</p>
-
-                <div class="card-info" style="background: var(--bg-primary); padding: var(--space-6); border-radius: var(--radius-lg); border: 2px solid var(--border-light);">
-                    <div class="info-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--border-light);">
-                        <span style="font-weight: 600; color: var(--text-muted);">شماره کارت:</span>
-                        <span class="card-number" dir="ltr" style="font-family: 'Courier New', monospace; font-weight: 700; font-size: 1.1rem; letter-spacing: 2px; color: var(--color-gold);">{{ settings.card_number }}</span>
-                    </div>
-                    
-                    <div class="info-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--border-light);">
-                        <span style="font-weight: 600; color: var(--text-muted);">صاحب کارت:</span>
-                        <span style="font-weight: 500;">{{ settings.card_holder_name }}</span>
-                    </div>
-                    
-                    <div class="info-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); padding: var(--space-3) 0;">
-                        <span style="font-weight: 600; color: var(--text-muted);">بانک:</span>
-                        <span style="font-weight: 500;">{{ settings.bank_name }}</span>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Transaction Form -->
-            <div class="transaction-form" style="background: var(--bg-secondary); padding: var(--space-6); border-radius: var(--radius-lg); margin-bottom: var(--space-7);">
-                <h3 class="checkout-form-header" style="margin-top: 0;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
-                        <rect x="2" y="5" width="20" height="14" rx="2"/>
-                        <path d="M2 10h20"/>
-                        <path d="M6 15h12"/>
-                    </svg>
-                    ثبت اطلاعات پرداخت
-                </h3>
-                
-                <p style="margin-bottom: var(--space-6); color: var(--text-secondary);">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true" style="display: inline; margin-left: 6px; vertical-align: text-bottom;">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 16v-4M12 8h.01"/>
-                    </svg>
-                    پس از واریز وجه، شماره پیگیری تراکنش بانکی را در کادر زیر وارد کنید:
+                <p>
+                    از طرف فروشگاه با شما تماسی برقرار خواهد شد تا هزینه نهایی با احتساب نوع و هزینه ارسال محاسبه شود.
+                    لطفاً منتظر تماس فروشگاه باشید.
                 </p>
-
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    <div class="form-group">
-                        <label for="{{ form.transaction_id.id_for_label }}" class="form-label">
-                            {{ form.transaction_id.label }}
-                            <span class="required" aria-label="الزامی">*</span>
-                        </label>
-                        {{ form.transaction_id }}
-                        <p class="field-hint">شماره پیگیری را دقیقاً از رسید بانکی یا پیامک واریز کپی کنید. این شماره به صورت یک سری اعداد و حروف است.</p>
-                        {% if form.transaction_id.errors %}
-                            {% for error in form.transaction_id.errors %}
-                            <span class="field-error">{{ error }}</span>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary btn-large">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        ثبت نهایی سفارش
-                    </button>
-                </form>
             </div>
 
-            <!-- Order Items List -->
-            <div class="order-items-list" style="background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); overflow: hidden;">
-                <div style="padding: var(--space-6); border-bottom: 1px solid var(--border-light); background: var(--bg-secondary);">
-                    <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-2);">
+            <!-- Order Summary -->
+            <div class="order-info">
+                <div class="order-info-grid">
+                    <div>
+                        <span class="order-info-label">وضعیت</span>
+                        <span class="order-status-badge">{{ order.get_status_display }}</span>
+                    </div>
+                    <div>
+                        <span class="order-info-label">مبلغ محصولات</span>
+                        <span class="order-total">{{ order.total_price|floatformat:0 }} تومان</span>
+                    </div>
+                    <div>
+                        <span class="order-info-label">نام گیرنده</span>
+                        <span>{{ order.customer_name }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Items -->
+            <div class="order-items-list">
+                <div class="order-items-header">
+                    <h3>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
                             <circle cx="9" cy="21" r="1"/>
                             <circle cx="20" cy="21" r="1"/>
@@ -115,54 +67,41 @@
                         محصولات سفارش شما
                     </h3>
                 </div>
-                
-                <div style="padding: var(--space-6);">
+
+                <div class="order-items-body">
                     {% for item in order.items.all %}
-                    <div class="order-item-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-4); padding: var(--space-4) 0; border-bottom: 1px solid var(--border-light); align-items: center;">
-                        <span style="font-weight: 500;">{{ item.product.title }}</span>
-                        <span style="text-align: center; color: var(--text-muted);">{{ item.quantity }} عدد</span>
-                        <span style="text-align: left; font-weight: 600;">{{ item.get_subtotal|floatformat:0 }} تومان</span>
+                    <div class="order-item-row">
+                        <span class="order-item-title">{{ item.product.title }}</span>
+                        <span class="order-item-qty">{{ item.quantity }} عدد</span>
+                        <span class="order-item-price">{{ item.get_subtotal|floatformat:0 }} تومان</span>
                     </div>
                     {% endfor %}
-                    
-                    <div class="order-total-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-4); padding: var(--space-4) 0; margin-top: var(--space-4); border-top: 2px solid var(--color-gold); font-weight: 700; color: var(--color-gold);">
+
+                    <div class="order-total-row">
                         <span></span>
-                        <span style="text-align: center;">جمع کل:</span>
-                        <span style="text-align: left;">{{ order.total_price|floatformat:0 }} تومان</span>
+                        <span>جمع کل محصولات:</span>
+                        <span>{{ order.total_price|floatformat:0 }} تومان</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="confirmation-actions">
+                <a href="{% url 'website:order_tracking' %}" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="M20 20l-3.5-3.5"/>
+                    </svg>
+                    پیگیری سفارش
+                </a>
+                <a href="{% url 'website:home' %}" class="btn btn-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                        <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/>
+                    </svg>
+                    بازگشت به صفحه اصلی
+                </a>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-#id_transaction_id {
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    border: 2px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 1rem;
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
-    letter-spacing: 1px;
-    transition: all var(--transition-base);
-}
-
-#id_transaction_id::placeholder {
-    color: var(--text-muted);
-    opacity: 0.7;
-    font-family: inherit;
-    font-weight: normal;
-    letter-spacing: normal;
-}
-
-#id_transaction_id:focus {
-    outline: none;
-    border-color: var(--color-gold);
-    box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
-}
-</style>
 {% endblock %}

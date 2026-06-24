@@ -124,30 +124,246 @@
         });
     }
 
-    // ========== CART FUNCTIONALITY ==========
-    function initCart() {
-        const cartButtons = document.querySelectorAll('.qty-btn');
-        cartButtons.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const form = this.closest('.quantity-form');
-                if (form) {
-                    const input = form.querySelector('.qty-input');
-                    const isIncrease = this.textContent.trim() === '+';
-                    const currentQty = parseInt(input.value) || 1;
-                    const maxQty = parseInt(input.getAttribute('max')) || 99;
+    // ========== TOAST NOTIFICATIONS ==========
+    function showToast(message, type = 'success', options = {}) {
+        const container = document.querySelector('[data-toast-container]');
+        if (!container || !message) return;
 
-                    if (isIncrease && currentQty < maxQty) {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.setAttribute('role', 'status');
+
+        const body = document.createElement('div');
+        body.className = 'toast-body';
+        body.textContent = message;
+
+        if (options.cartLink) {
+            const link = document.createElement('a');
+            link.href = options.cartLink;
+            link.className = 'toast-action';
+            link.textContent = 'مشاهده سبد خرید';
+            body.appendChild(document.createElement('br'));
+            body.appendChild(link);
+        }
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'toast-close';
+        closeBtn.setAttribute('aria-label', 'بستن');
+        closeBtn.textContent = '×';
+
+        toast.appendChild(body);
+        toast.appendChild(closeBtn);
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => toast.classList.add('toast-visible'));
+
+        const dismiss = () => {
+            toast.classList.remove('toast-visible');
+            setTimeout(() => toast.remove(), 300);
+        };
+
+        const timeout = setTimeout(dismiss, options.duration || 4500);
+        closeBtn.addEventListener('click', () => {
+            clearTimeout(timeout);
+            dismiss();
+        });
+    }
+
+    function formatPrice(amount) {
+        const value = Math.round(Number(amount) || 0);
+        return value.toLocaleString('fa-IR') + ' تومان';
+    }
+
+    function updateCartBadge(count) {
+        const badge = document.querySelector('[data-cart-count]');
+        if (!badge) return;
+        const itemCount = Number(count) || 0;
+        badge.textContent = itemCount;
+        badge.classList.toggle('cart-count--empty', itemCount === 0);
+    }
+
+    function getCsrfToken(form) {
+        const input = form.querySelector('[name=csrfmiddlewaretoken]');
+        return input ? input.value : '';
+    }
+
+    // ========== PRODUCT QUANTITY SELECTORS ==========
+    function initProductQtySelectors() {
+        document.querySelectorAll('.product-qty-form').forEach(form => {
+            const input = form.querySelector('.qty-input');
+            if (!input) return;
+
+            form.querySelectorAll('[data-qty-action]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const action = btn.getAttribute('data-qty-action');
+                    const currentQty = parseInt(input.value, 10) || 1;
+                    const maxQty = parseInt(input.getAttribute('max'), 10) || 99;
+                    const minQty = parseInt(input.getAttribute('min'), 10) || 1;
+
+                    if (action === 'increase' && currentQty < maxQty) {
                         input.value = currentQty + 1;
-                    } else if (!isIncrease && currentQty > 1) {
+                    } else if (action === 'decrease' && currentQty > minQty) {
                         input.value = currentQty - 1;
                     }
+                });
+            });
+        });
+    }
 
-                    // Trigger change event for form submission
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
+    // ========== ADD TO CART (AJAX) ==========
+    function initAddToCart() {
+        document.querySelectorAll('[data-add-to-cart]').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const submitBtn = form.querySelector('[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCsrfToken(form),
+                        },
+                        body: new FormData(form),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        showToast(data.message || 'افزودن به سبد خرید ناموفق بود.', 'error');
+                        return;
+                    }
+
+                    updateCartBadge(data.cart_count);
+                    const cartUrl = document.querySelector('.cart-icon')?.getAttribute('href') || '/cart/';
+                    showToast(data.message, 'success', { cartLink: cartUrl });
+                } catch (error) {
+                    showToast('خطا در افزودن به سبد خرید. دوباره تلاش کنید.', 'error');
+                } finally {
+                    if (submitBtn) submitBtn.disabled = false;
                 }
             });
         });
+    }
+
+    // ========== CART PAGE AJAX UPDATES ==========
+    function initCartPage() {
+        const cartPage = document.querySelector('.cart-page');
+        if (!cartPage) return;
+
+        async function updateCartItem(form, action) {
+            const formData = new FormData(form);
+            formData.set('action', action);
+
+            const cartItem = form.closest('[data-cart-item]');
+            const input = form.querySelector('.qty-input');
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCsrfToken(form),
+                    },
+                    body: formData,
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    showToast(data.message || 'به‌روزرسانی سبد خرید ناموفق بود.', 'error');
+                    return;
+                }
+
+                updateCartBadge(data.cart_count);
+
+                const totalEl = document.querySelector('[data-cart-total]');
+                const countEl = document.querySelector('[data-cart-item-count]');
+                if (totalEl) totalEl.textContent = formatPrice(data.total);
+                if (countEl) countEl.textContent = data.total_quantity ?? data.cart_count;
+
+                if (data.removed || data.cart_count === 0) {
+                    if (cartItem) cartItem.remove();
+                }
+
+                if (data.cart_count === 0) {
+                    window.location.reload();
+                    return;
+                }
+
+                if (cartItem && data.item) {
+                    if (input) input.value = data.item.quantity;
+                    const subtotalEl = cartItem.querySelector('[data-cart-subtotal]');
+                    if (subtotalEl) subtotalEl.textContent = formatPrice(data.item.subtotal);
+                }
+            } catch (error) {
+                showToast('خطا در به‌روزرسانی سبد خرید.', 'error');
+            }
+        }
+
+        document.querySelectorAll('[data-cart-update-form]').forEach(form => {
+            const input = form.querySelector('.qty-input');
+
+            form.querySelectorAll('[data-action]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const action = btn.getAttribute('data-action');
+                    updateCartItem(form, action);
+                });
+            });
+
+            if (input) {
+                input.addEventListener('change', () => {
+                    const formData = new FormData(form);
+                    formData.set('action', 'set');
+                    formData.set('quantity', input.value);
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCsrfToken(form),
+                        },
+                        body: formData,
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.success) {
+                                showToast(data.message || 'به‌روزرسانی سبد خرید ناموفق بود.', 'error');
+                                return;
+                            }
+
+                            updateCartBadge(data.cart_count);
+
+                            const totalEl = document.querySelector('[data-cart-total]');
+                            const countEl = document.querySelector('[data-cart-item-count]');
+                            if (totalEl) totalEl.textContent = formatPrice(data.total);
+                            if (countEl) countEl.textContent = data.total_quantity ?? data.cart_count;
+
+                            const cartItem = form.closest('[data-cart-item]');
+                            if (data.removed || data.cart_count === 0) {
+                                if (cartItem) cartItem.remove();
+                            }
+                            if (data.cart_count === 0) {
+                                window.location.reload();
+                                return;
+                            }
+                            if (cartItem && data.item) {
+                                input.value = data.item.quantity;
+                                const subtotalEl = cartItem.querySelector('[data-cart-subtotal]');
+                                if (subtotalEl) subtotalEl.textContent = formatPrice(data.item.subtotal);
+                            }
+                        })
+                        .catch(() => showToast('خطا در به‌روزرسانی سبد خرید.', 'error'));
+                });
+            }
+        });
+    }
+
+    // ========== CART FUNCTIONALITY (legacy qty buttons outside cart page) ==========
+    function initCart() {
+        // Handled by initProductQtySelectors and initCartPage
     }
 
     // ========== SMOOTH SCROLL FOR ANCHOR LINKS ==========
@@ -309,6 +525,9 @@
         initHeaderScroll();
         initMessages();
         initForms();
+        initProductQtySelectors();
+        initAddToCart();
+        initCartPage();
         initCart();
         initSmoothScroll();
         initLazyLoad();

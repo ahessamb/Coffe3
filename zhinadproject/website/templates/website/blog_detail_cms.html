@@ -1,6 +1,19 @@
 {% extends 'website/base.html' %}
+{% load seo_tags %}
 
 {% block title %}{{ page.title }} - مجله ژیناد{% endblock %}
+{% block og_title %}{{ page.title }} - مجله ژیناد{% endblock %}
+{% block twitter_title %}{{ page.title }} - مجله ژیناد{% endblock %}
+{% block meta_description %}{{ page.excerpt|default:page.title|meta_truncate:155 }}{% endblock %}
+{% block og_description %}{{ page.excerpt|default:page.title|meta_truncate:155 }}{% endblock %}
+{% block twitter_description %}{{ page.excerpt|default:page.title|meta_truncate:155 }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_image %}{% if page.featured_image %}{{ page.featured_image|absolute_media }}{% else %}{{ default_og_image }}{% endif %}{% endblock %}
+{% block twitter_image %}{% if page.featured_image %}{{ page.featured_image|absolute_media }}{% else %}{{ default_og_image }}{% endif %}{% endblock %}
+
+{% block structured_data %}
+{% json_ld article_json_ld %}
+{% endblock %}
 
 {% block content %}
 <!-- Page Header -->

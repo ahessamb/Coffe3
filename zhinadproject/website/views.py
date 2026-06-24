@@ -1,12 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView, TemplateView
 from django.contrib import messages
-from django.utils import timezone
+from django.http import JsonResponse
 from django.db.models import F
 from decimal import Decimal
-from .models import Category, Tag, Product, Order, OrderItem, SiteSettings, BlogPost, ContentPage
-from .forms import OrderForm, TransactionForm, OrderTrackingForm
-from .utils import send_all_notifications
+from .models import Category, Tag, Product, Order, OrderItem, BlogPost, ContentPage
+from .forms import OrderForm, OrderTrackingForm
+from .utils import schedule_order_notifications
+from .seo import article_json_ld, product_json_ld
 
 
 # ========== STATIC PAGES ==========
@@ -95,6 +96,7 @@ class BlogDetailView(DetailView):
             .order_by("order", "id")
         )
         context["blocks"] = blocks
+        context["article_json_ld"] = article_json_ld(page)
         return context
 
 
@@ -159,6 +161,11 @@ class ProductDetailView(DetailView):
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["product_json_ld"] = product_json_ld(context["product"])
+        return context
+
 
 # ========== CART & CHECKOUT ==========
 
@@ -173,14 +180,94 @@ def save_cart(request, cart):
     request.session.modified = True
 
 
+def is_ajax_request(request):
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+
+def build_cleaned_cart(cart, products_by_id=None):
+    """Validate cart items against current products and compute totals."""
+    if not cart:
+        return {}, Decimal("0"), {}
+
+    if products_by_id is None:
+        product_ids = [int(pid) for pid in cart.keys()]
+        products_by_id = {
+            p.id: p for p in Product.objects.filter(id__in=product_ids, is_active=True).select_related("category")
+        }
+
+    cleaned_cart = {}
+    total = Decimal("0")
+    for pid_str, item in cart.items():
+        pid = int(pid_str)
+        product = products_by_id.get(pid)
+        if not product or product.price is None or product.stock <= 0:
+            continue
+
+        qty = int(item.get("quantity", 1))
+        qty = max(1, min(qty, int(product.stock)))
+        unit_price = Decimal(str(product.price))
+        subtotal = unit_price * qty
+
+        cleaned_cart[pid_str] = {
+            **item,
+            "price": float(product.price),
+            "quantity": qty,
+            "max_quantity": int(product.stock),
+            "subtotal": float(subtotal),
+        }
+        total += subtotal
+
+    return cleaned_cart, total, products_by_id
+
+
+def cart_json_payload(cleaned_cart, total, product_id=None, removed=False):
+    items = {
+        pid: {
+            "quantity": item["quantity"],
+            "subtotal": item["subtotal"],
+            "price": item["price"],
+        }
+        for pid, item in cleaned_cart.items()
+    }
+    total_quantity = sum(item["quantity"] for item in cleaned_cart.values())
+    payload = {
+        "success": True,
+        "cart_count": len(cleaned_cart),
+        "total_quantity": total_quantity,
+        "total": float(total),
+        "items": items,
+        "removed": removed,
+    }
+    if product_id is not None:
+        pid_str = str(product_id)
+        if removed or pid_str not in cleaned_cart:
+            payload["item"] = None
+        else:
+            item = cleaned_cart[pid_str]
+            payload["item"] = {
+                "quantity": item["quantity"],
+                "subtotal": item["subtotal"],
+                "price": item["price"],
+            }
+    return payload
+
+
 def add_to_cart(request, product_id):
     """Add product to cart"""
     product = get_object_or_404(Product, id=product_id, is_active=True)
+    ajax = is_ajax_request(request)
+
     if product.price is None:
-        messages.error(request, "این محصول قیمت ندارد. برای اطلاع از آخرین قیمت تماس بگیرید.")
+        message = "این محصول قیمت ندارد. برای اطلاع از آخرین قیمت تماس بگیرید."
+        if ajax:
+            return JsonResponse({"success": False, "message": message}, status=400)
+        messages.error(request, message)
         return redirect(request.META.get("HTTP_REFERER", "website:products"))
     if product.stock <= 0:
-        messages.error(request, "این محصول موجود نیست.")
+        message = "این محصول موجود نیست."
+        if ajax:
+            return JsonResponse({"success": False, "message": message}, status=400)
+        messages.error(request, message)
         return redirect(request.META.get("HTTP_REFERER", "website:products"))
 
     cart = get_cart(request)
@@ -206,8 +293,15 @@ def add_to_cart(request, product_id):
         }
 
     save_cart(request, cart)
-    messages.success(request, f'{product.title} به سبد خرید اضافه شد')
+    success_message = f'{product.title} به سبد خرید اضافه شد'
 
+    if ajax:
+        cleaned_cart, total, _ = build_cleaned_cart(cart)
+        payload = cart_json_payload(cleaned_cart, total)
+        payload["message"] = success_message
+        return JsonResponse(payload)
+
+    messages.success(request, success_message)
     return redirect(request.META.get('HTTP_REFERER', 'website:products'))
 
 
@@ -215,13 +309,22 @@ def update_cart(request, product_id):
     """Update quantity in cart"""
     cart = get_cart(request)
     product_id_str = str(product_id)
+    ajax = is_ajax_request(request)
+    removed = False
 
     if product_id_str in cart:
         product = get_object_or_404(Product, id=product_id, is_active=True)
         if product.price is None or product.stock <= 0:
             del cart[product_id_str]
             save_cart(request, cart)
-            messages.error(request, "این محصول قابل خرید نیست و از سبد حذف شد.")
+            removed = True
+            message = "این محصول قابل خرید نیست و از سبد حذف شد."
+            if ajax:
+                cleaned_cart, total, _ = build_cleaned_cart(cart)
+                payload = cart_json_payload(cleaned_cart, total, product_id=product_id, removed=True)
+                payload["message"] = message
+                return JsonResponse(payload)
+            messages.error(request, message)
             return redirect("website:cart")
 
         action = request.POST.get('action')
@@ -235,6 +338,7 @@ def update_cart(request, product_id):
                 cart[product_id_str]['quantity'] -= 1
             else:
                 del cart[product_id_str]
+                removed = True
         elif action == "set":
             try:
                 qty = int(request.POST.get("quantity", 1))
@@ -244,6 +348,11 @@ def update_cart(request, product_id):
             cart[product_id_str]["quantity"] = qty
 
         save_cart(request, cart)
+
+    if ajax:
+        cleaned_cart, total, _ = build_cleaned_cart(cart)
+        payload = cart_json_payload(cleaned_cart, total, product_id=product_id, removed=removed)
+        return JsonResponse(payload)
 
     return redirect('website:cart')
 
@@ -266,42 +375,16 @@ def cart_view(request):
     cart = get_cart(request)
 
     if not cart:
-        return render(request, 'website/cart.html', {'cart': {}, 'total': 0})
+        return render(request, 'website/cart.html', {'cart': {}, 'total': 0, 'total_quantity': 0})
 
-    # Re-validate cart against current products (price/stock)
-    product_ids = [int(pid) for pid in cart.keys()]
-    products_by_id = {
-        p.id: p for p in Product.objects.filter(id__in=product_ids, is_active=True).select_related("category")
-    }
-
-    cleaned_cart = {}
-    total = Decimal("0")
-    for pid_str, item in cart.items():
-        pid = int(pid_str)
-        product = products_by_id.get(pid)
-        if not product or product.price is None or product.stock <= 0:
-            continue
-
-        qty = int(item.get("quantity", 1))
-        qty = max(1, min(qty, int(product.stock)))
-        unit_price = Decimal(str(product.price))
-        subtotal = unit_price * qty
-
-        cleaned_cart[pid_str] = {
-            **item,
-            "price": float(product.price),
-            "quantity": qty,
-            "max_quantity": int(product.stock),
-            "subtotal": float(subtotal),
-        }
-        total += subtotal
+    cleaned_cart, total, products_by_id = build_cleaned_cart(cart)
 
     if cleaned_cart != cart:
         save_cart(request, cleaned_cart)
         cart = cleaned_cart
 
     if not cart:
-        return render(request, 'website/cart.html', {'cart': {}, 'total': 0})
+        return render(request, 'website/cart.html', {'cart': {}, 'total': 0, 'total_quantity': 0})
 
     if request.method == 'POST':
         form = OrderForm(request.POST)
@@ -322,6 +405,8 @@ def cart_view(request):
                     price=Decimal(str(item['price']))
                 )
 
+            schedule_order_notifications(order, action='pending_order')
+
             # Clear cart
             request.session['cart'] = {}
             request.session['order_id'] = order.id
@@ -330,9 +415,12 @@ def cart_view(request):
     else:
         form = OrderForm()
 
+    total_quantity = sum(item['quantity'] for item in cart.values())
+
     context = {
         'cart': cart,
         'total': total,
+        'total_quantity': total_quantity,
         'form': form
     }
 
@@ -340,47 +428,23 @@ def cart_view(request):
 
 
 def order_confirmation(request):
-    """Show payment details and accept transaction ID"""
+    """Show order confirmation with tracking code after checkout."""
     order_id = request.session.get('order_id')
     if not order_id:
         return redirect('website:home')
 
     order = get_object_or_404(Order, id=order_id)
-    settings = SiteSettings.objects.first()
-
-    if request.method == 'POST':
-        form = TransactionForm(request.POST)
-        if form.is_valid():
-            order.transaction_id = form.cleaned_data['transaction_id']
-            order.status = 'purchased'
-            order.purchased_at = timezone.now()
-            order.save()
-
-            # Send notifications to both Telegram and Bale
-            send_all_notifications(order, action='new_order')
-
-            # Clear session
-            if 'order_id' in request.session:
-                del request.session['order_id']
-
-            messages.success(request, 'سفارش شما با موفقیت ثبت شد! کد پیگیری خود را یادداشت کنید.')
-            return redirect('website:order_success', tracking_code=order.tracking_code)
-    else:
-        form = TransactionForm()
 
     context = {
         'order': order,
-        'settings': settings,
-        'form': form
     }
 
     return render(request, 'website/order_confirmation.html', context)
 
 
 def order_success(request, tracking_code):
-    """Order success page"""
-    order = get_object_or_404(Order, tracking_code=tracking_code)
-    return render(request, 'website/order_success.html', {'order': order})
+    """Legacy URL — redirect to order tracking."""
+    return redirect('website:order_tracking')
 
 
 # ========== ORDER TRACKING ==========

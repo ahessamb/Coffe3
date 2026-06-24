@@ -1,6 +1,7 @@
 {% extends 'website/base.html' %}
 
 {% block title %}سبد خرید - ژیناد{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
 <div class="cart-page">
@@ -12,7 +13,7 @@
             <!-- Cart Items -->
             <div class="cart-items">
                 {% for product_id, item in cart.items %}
-                <div class="cart-item">
+                <div class="cart-item" data-cart-item data-product-id="{{ product_id }}" data-unit-price="{{ item.price }}">
                     <!-- Item Image -->
                     <div class="item-image">
                         {% if item.main_image %}
@@ -36,17 +37,17 @@
 
                     <!-- Quantity Control -->
                     <div class="item-quantity">
-                        <form action="{% url 'website:update_cart' product_id %}" method="post" class="quantity-form">
+                        <form action="{% url 'website:update_cart' product_id %}" method="post" class="quantity-form" data-cart-update-form>
                             {% csrf_token %}
-                            <button type="button" name="action" value="decrease" class="qty-btn" aria-label="کاهش تعداد" title="کاهش">−</button>
-                            <input type="number" name="quantity" min="1" max="{{ item.max_quantity|default:99 }}" value="{{ item.quantity }}" class="qty-input" aria-label="تعداد">
-                            <button type="button" name="action" value="increase" class="qty-btn" aria-label="افزایش تعداد" title="افزایش">+</button>
+                            <button type="button" class="qty-btn" data-action="decrease" aria-label="کاهش تعداد" title="کاهش">−</button>
+                            <input type="number" name="quantity" min="1" max="{{ item.max_quantity|default:99 }}" value="{{ item.quantity }}" class="qty-input" aria-label="تعداد" readonly>
+                            <button type="button" class="qty-btn" data-action="increase" aria-label="افزایش تعداد" title="افزایش">+</button>
                         </form>
                     </div>
 
                     <!-- Item Subtotal -->
                     <div class="item-total">
-                        <p>{{ item.subtotal|floatformat:0 }} تومان</p>
+                        <p data-cart-subtotal>{{ item.subtotal|floatformat:0 }} تومان</p>
                     </div>
 
                     <!-- Remove Button -->
@@ -75,12 +76,12 @@
                     
                     <div class="summary-line">
                         <span>تعداد اقلام:</span>
-                        <span>{{ request.session.cart|length }}</span>
+                        <span data-cart-item-count>{{ total_quantity }}</span>
                     </div>
                     
                     <div class="summary-line">
                         <span>جمع کل:</span>
-                        <span class="total-price">{{ total|floatformat:0 }} تومان</span>
+                        <span class="total-price" data-cart-total>{{ total|floatformat:0 }} تومان</span>
                     </div>
                 </div>
 

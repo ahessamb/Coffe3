@@ -174,6 +174,76 @@ class Order(models.Model):
     def get_total_items(self):
         return sum(item.quantity for item in self.items.all())
 
+    TRACKING_STATUS_FLOW = [
+        'pending',
+        'purchased',
+        'confirmed',
+        'processing',
+        'shipped',
+        'delivered',
+    ]
+
+    TRACKING_STATUS_DESCRIPTIONS = {
+        'pending': 'سفارش ثبت شده و در انتظار پرداخت یا تماس فروشگاه است.',
+        'purchased': 'پرداخت دریافت شد. سفارش در انتظار تأیید فروشگاه است.',
+        'confirmed': 'سفارش تأیید شده و برای آماده‌سازی آماده است.',
+        'processing': 'سفارش در انبار در حال آماده‌سازی است.',
+        'shipped': 'سفارش از انبار ارسال شده است.',
+        'delivered': 'سفارش با موفقیت تحویل داده شد.',
+        'cancelled': 'این سفارش لغو شده است.',
+    }
+
+    def _status_timestamp(self, status_key):
+        if status_key == 'pending':
+            return self.created_at
+        if status_key == 'purchased':
+            return self.purchased_at
+        if status_key == 'confirmed':
+            return self.confirmed_at
+        if status_key == 'cancelled':
+            return self.updated_at
+        return None
+
+    def get_tracking_timeline(self):
+        """Build full status timeline for order tracking page."""
+        status_labels = dict(self.STATUS_CHOICES)
+        steps = []
+        is_cancelled = self.status == 'cancelled'
+
+        try:
+            current_index = self.TRACKING_STATUS_FLOW.index(self.status)
+        except ValueError:
+            current_index = -1
+
+        for index, status_key in enumerate(self.TRACKING_STATUS_FLOW):
+            if is_cancelled:
+                state = 'completed' if status_key == 'pending' else 'upcoming'
+            elif index < current_index:
+                state = 'completed'
+            elif index == current_index:
+                state = 'current'
+            else:
+                state = 'upcoming'
+
+            steps.append({
+                'status': status_key,
+                'label': status_labels.get(status_key, status_key),
+                'description': self.TRACKING_STATUS_DESCRIPTIONS.get(status_key, ''),
+                'timestamp': self._status_timestamp(status_key),
+                'state': state,
+            })
+
+        if is_cancelled:
+            steps.append({
+                'status': 'cancelled',
+                'label': status_labels.get('cancelled', 'لغو شده'),
+                'description': self.TRACKING_STATUS_DESCRIPTIONS['cancelled'],
+                'timestamp': self._status_timestamp('cancelled'),
+                'state': 'cancelled',
+            })
+
+        return steps
+
     def save(self, *args, **kwargs):
         if not self.tracking_code:
             # Short, readable, non-incremental tracking code (collision-checked)

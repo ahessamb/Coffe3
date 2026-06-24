@@ -1,5 +1,12 @@
+import logging
+import threading
+
 import requests
+from django.db import close_old_connections
+
 from .models import SiteSettings, NotificationRecipient
+
+logger = logging.getLogger(__name__)
 
 
 def send_telegram_notification(order, action='new_order'):
@@ -111,31 +118,80 @@ def send_bale_notification(order, action='new_order'):
 
 
 def send_all_notifications(order, action='new_order'):
-    """Send notifications to both Telegram and Bale"""
+    """Send notifications to both Telegram and Bale (synchronous)."""
     telegram_result = send_telegram_notification(order, action)
     bale_result = send_bale_notification(order, action)
 
     return telegram_result or bale_result
 
 
+def _run_notifications_in_background(order_id, action):
+    """Worker executed in a background thread."""
+    close_old_connections()
+    try:
+        from .models import Order
+
+        order = Order.objects.prefetch_related('items__product').get(pk=order_id)
+        send_all_notifications(order, action=action)
+    except Exception:
+        logger.exception("Background notification failed for order %s (%s)", order_id, action)
+    finally:
+        close_old_connections()
+
+
+def schedule_order_notifications(order, action='new_order'):
+    """Queue Telegram/Bale notifications without blocking the current request."""
+    order_id = order.pk if hasattr(order, 'pk') else order
+    thread = threading.Thread(
+        target=_run_notifications_in_background,
+        args=(order_id, action),
+        name=f"order-notify-{order_id}-{action}",
+        daemon=True,
+    )
+    thread.start()
+
+
 def _prepare_message(order, action):
     """Prepare notification message based on action"""
-    if action == 'new_order':
+    if action == 'pending_order':
         message = f"""
-🛍 سفارش جدید ثبت شد!
+🛍 سفارش جدید — در انتظار پرداخت
+
+📋 کد پیگیری: {order.tracking_code}
+👤 مشتری: {order.customer_name}
+📞 تلفن: {order.phone_number}
+📞 تلفن دوم: {order.phone_number_2 or '—'}
+📍 آدرس: {order.address}
+📝 یادداشت مشتری: {order.additional_notes or '—'}
+💰 مبلغ محصولات: {order.total_price:,} تومان
+
+📦 محصولات:
+"""
+        for item in order.items.all():
+            subtitle = f" ({item.product.subtitle})" if item.product.subtitle else ""
+            message += f"• {item.product.title}{subtitle} — {item.quantity} عدد — {item.get_subtotal():,} تومان\n"
+
+        message += f"\n⏰ زمان ثبت: {order.created_at.strftime('%Y/%m/%d - %H:%M')}"
+
+    elif action == 'new_order':
+        transaction_line = order.transaction_id or '—'
+        purchased_at = order.purchased_at or order.created_at
+        message = f"""
+🛍 سفارش جدید — پرداخت شده
 
 📋 کد پیگیری: {order.tracking_code}
 👤 مشتری: {order.customer_name}
 📞 تلفن: {order.phone_number}
 💰 مبلغ: {order.total_price:,} تومان
-🔢 شماره پیگیری تراکنش: {order.transaction_id}
+🔢 شماره پیگیری تراکنش: {transaction_line}
 
 📦 محصولات:
 """
         for item in order.items.all():
-            message += f"• {item.product.title} - ({item.product.subtitle}) {item.quantity} عدد\n"
+            subtitle = f" ({item.product.subtitle})" if item.product.subtitle else ""
+            message += f"• {item.product.title}{subtitle} — {item.quantity} عدد\n"
 
-        message += f"\n⏰ زمان: {order.purchased_at.strftime('%Y/%m/%d - %H:%M')}"
+        message += f"\n⏰ زمان: {purchased_at.strftime('%Y/%m/%d - %H:%M')}"
 
     elif action == 'confirmed':
         message = f"""

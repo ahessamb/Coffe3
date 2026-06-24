@@ -4,9 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#1a1110">
-    <meta name="description" content="ژیناد - قهوه و شکلات دست‌ساز با کیفیت ممتاز">
+    <meta name="description" content="{% block meta_description %}ژیناد - قهوه و شکلات دست‌ساز با کیفیت ممتاز در مشهد{% endblock %}">
+    <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
     <title>{% block title %}ژیناد - قهوه و شکلات{% endblock %}</title>
-    {% load static %}
+    <link rel="canonical" href="{% block canonical_href %}{{ canonical_url }}{% endblock %}">
+
+    <meta property="og:site_name" content="ژیناد">
+    <meta property="og:locale" content="fa_IR">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}ژیناد - قهوه و شکلات{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}ژیناد - قهوه و شکلات دست‌ساز با کیفیت ممتاز در مشهد{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}{{ canonical_url }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ default_og_image }}{% endblock %}">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}ژیناد - قهوه و شکلات{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}ژیناد - قهوه و شکلات دست‌ساز با کیفیت ممتاز در مشهد{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{{ default_og_image }}{% endblock %}">
+
+    {% load static seo_tags %}
+    {% if organization_json_ld %}{% json_ld organization_json_ld %}{% endif %}
+    {% block structured_data %}{% endblock %}
+
     <link rel="stylesheet" href="{% static 'website/css/style.css' %}">
     <link rel="icon" type="image/png" href="{% static 'website/images/favicon.png' %}">
     {% block extra_css %}{% endblock %}
@@ -63,9 +82,7 @@
                         <path d="M16 10a4 4 0 0 1-8 0"/>
                     </svg>
                     <span class="header-action-label">سبد خرید</span>
-                    {% if request.session.cart %}
-                    <span class="cart-count" aria-label="تعداد اقلام در سبد">{{ request.session.cart|length|default:0 }}</span>
-                    {% endif %}
+                    <span class="cart-count{% if not request.session.cart %} cart-count--empty{% endif %}" data-cart-count aria-label="تعداد اقلام در سبد">{{ request.session.cart|length|default:0 }}</span>
                 </a>
 
                 <!-- Mobile Menu Toggle -->
@@ -145,7 +162,10 @@
     </a>
 </nav>
 
-<!-- Alert Messages -->
+<!-- Toast Notifications -->
+<div class="toast-container" data-toast-container aria-live="polite" aria-atomic="true"></div>
+
+<!-- Alert Messages (form errors, checkout, etc.) -->
 {% if messages %}
 <div class="messages" role="status" aria-live="polite" aria-atomic="true">
     <div class="container">

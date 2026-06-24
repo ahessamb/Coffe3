@@ -1,6 +1,11 @@
 {% extends 'website/base.html' %}
 
 {% block title %}محصولات - ژیناد{% endblock %}
+{% block og_title %}محصولات - ژیناد{% endblock %}
+{% block twitter_title %}محصولات - ژیناد{% endblock %}
+{% block meta_description %}مشاهده و خرید قهوه و شکلات دست‌ساز ژیناد — مجموعه‌ای از بهترین محصولات با کیفیت ممتاز.{% endblock %}
+{% block og_description %}مشاهده و خرید قهوه و شکلات دست‌ساز ژیناد — مجموعه‌ای از بهترین محصولات با کیفیت ممتاز.{% endblock %}
+{% block twitter_description %}مشاهده و خرید قهوه و شکلات دست‌ساز ژیناد — مجموعه‌ای از بهترین محصولات با کیفیت ممتاز.{% endblock %}
 
 {% block content %}
 <!-- Page Header -->
@@ -158,16 +163,16 @@
                         {% if product.price != None %}
                         <p class="product-price">{{ product.price|floatformat:0 }} تومان</p>
                         {% else %}
-                        <p class="product-price no-price">برای اطلاع از آخرین قیمت تماس بگیرید</p>
+                        <p class="product-price no-price">{% include 'website/partials/no_price_message.html' %}</p>
                         {% endif %}
                     </div>
                 </a>
                 
                 {% if product.is_buyable %}
-                <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form">
+                <form action="{% url 'website:add_to_cart' product.id %}" method="post" class="add-to-cart-form" data-add-to-cart>
                     {% csrf_token %}
                     <div class="add-qty">
-                        <input type="number" name="quantity" min="1" max="{{ product.stock }}" value="1" class="qty-input" aria-label="تعداد">
+                        {% include 'website/partials/product_qty_selector.html' with max_stock=product.stock %}
                         <button type="submit" class="btn btn-secondary" title="افزودن {{ product.title }} به سبد خرید">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
                                 <circle cx="9" cy="21" r="1"/>
@@ -177,8 +182,9 @@
                             افزودن
                         </button>
                     </div>
-                    {% include 'website/partials/cart_checkout_hint.html' %}
                 </form>
+                {% elif product.price == None %}
+                <p class="product-price no-price product-card-contact">{% include 'website/partials/no_price_message.html' %}</p>
                 {% endif %}
             </div>
             {% empty %}
