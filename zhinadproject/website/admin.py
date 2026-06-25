@@ -21,7 +21,7 @@ from .models import (
     NotificationRecipient,
 )
 from .utils import schedule_order_notifications
-from .backend_log import log_admin
+from .backend_log import format_log_value, log_admin
 
 
 class ProductImageInline(admin.TabularInline):
@@ -161,42 +161,50 @@ class ProductAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        if change:
-            changed_fields = []
-            for field in form.changed_data:
-                if field == "tags":
-                    continue
-                changed_fields.append(f"{field}={form.cleaned_data.get(field)}")
-            log_admin(
-                "Product updated",
-                admin_user=request.user.username,
-                product_id=obj.id,
-                title=obj.title,
-                price=f"{obj.price:,}" if obj.price is not None else "—",
-                stock=obj.stock,
-                is_active=obj.is_active,
-                changed=", ".join(changed_fields) if changed_fields else "none",
-            )
-        else:
-            log_admin(
-                "Product created",
-                admin_user=request.user.username,
-                product_id=obj.id,
-                title=obj.title,
-                price=f"{obj.price:,}" if obj.price is not None else "—",
-                stock=obj.stock,
-                category=obj.category.title if obj.category else "—",
-                is_active=obj.is_active,
-            )
+        try:
+            if change:
+                changed_fields = []
+                for field in form.changed_data:
+                    if field == "tags":
+                        continue
+                    changed_fields.append(
+                        f"{field}={format_log_value(form.cleaned_data.get(field))}"
+                    )
+                log_admin(
+                    "Product updated",
+                    admin_user=request.user.username,
+                    product_id=obj.id,
+                    title=obj.title,
+                    price=f"{obj.price:,}" if obj.price is not None else "—",
+                    stock=obj.stock,
+                    is_active=obj.is_active,
+                    changed=", ".join(changed_fields) if changed_fields else "none",
+                )
+            else:
+                log_admin(
+                    "Product created",
+                    admin_user=request.user.username,
+                    product_id=obj.id,
+                    title=obj.title,
+                    price=f"{obj.price:,}" if obj.price is not None else "—",
+                    stock=obj.stock,
+                    product_category=obj.category.title if obj.category else "—",
+                    is_active=obj.is_active,
+                )
+        except Exception:
+            pass
 
     def delete_model(self, request, obj):
-        log_admin(
-            "Product deleted",
-            level="warning",
-            admin_user=request.user.username,
-            product_id=obj.id,
-            title=obj.title,
-        )
+        try:
+            log_admin(
+                "Product deleted",
+                level="warning",
+                admin_user=request.user.username,
+                product_id=obj.id,
+                title=obj.title,
+            )
+        except Exception:
+            pass
         super().delete_model(request, obj)
 
 
